@@ -1,0 +1,4 @@
+node_modules/
+assets/js/config.js
+.vercel
+.DS_Store

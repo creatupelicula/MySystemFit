@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MySystemFit — Iniciar sesión</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/css/tokens.css" />
+<link rel="stylesheet" href="assets/css/app.css" />
+<style>
+  .auth-wrap { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+  .auth-card { width: 100%; max-width: 400px; }
+  .auth-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+  .auth-tabs button { flex: 1; }
+  .auth-role { display: flex; gap: 8px; margin-bottom: 16px; }
+  .auth-role button { flex: 1; }
+  .auth-error { color: var(--coral); font-size: 13px; margin-top: 8px; display: none; }
+  .auth-switch { text-align: center; margin-top: 16px; font-size: 13px; }
+  .auth-switch a { color: var(--indigo-hi); cursor: pointer; text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="auth-wrap">
+  <div class="card auth-card">
+    <div class="brand" style="margin-bottom:24px;justify-content:center">
+      <div class="brand__logo"><svg viewBox="0 0 24 24" width="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5 17.5 17.5M4 12l4-4M16 16l4-4M8 4l12 12M4 8l12 12"/></svg></div>
+      <div class="brand__name">MySystem<span>Fit</span></div>
+    </div>
+
+    <div class="auth-tabs">
+      <button class="btn btn--primary" id="tabLogin" type="button">Iniciar sesión</button>
+      <button class="btn btn--ghost" id="tabSignup" type="button">Crear cuenta</button>
+    </div>
+
+    <!-- ---------- LOGIN ---------- -->
+    <form id="formLogin">
+      <div class="field"><label>Email</label><input class="input" type="email" id="loginEmail" required autocomplete="email"></div>
+      <div class="field"><label>Contraseña</label><input class="input" type="password" id="loginPassword" required autocomplete="current-password"></div>
+      <button class="btn btn--primary btn--block" type="submit">Entrar</button>
+      <div class="auth-error" id="loginError"></div>
+    </form>
+
+    <!-- ---------- SIGNUP ---------- -->
+    <form id="formSignup" class="hidden">
+      <div class="auth-role">
+        <button type="button" class="btn btn--primary is-active" data-role="coach" id="roleCoach">Soy coach</button>
+        <button type="button" class="btn btn--ghost" data-role="alumno" id="roleAlumno">Soy alumno</button>
+      </div>
+      <div class="field"><label>Nombre completo</label><input class="input" id="suName" required></div>
+      <div class="field"><label>Email</label><input class="input" type="email" id="suEmail" required autocomplete="email"></div>
+      <div class="field"><label>Contraseña</label><input class="input" type="password" id="suPassword" required minlength="6" autocomplete="new-password"></div>
+      <div class="field" id="suCoachIdField">
+        <label>ID de tu coach</label>
+        <input class="input" id="suCoachId" placeholder="Tu coach te lo comparte">
+      </div>
+      <button class="btn btn--primary btn--block" type="submit">Crear cuenta</button>
+      <div class="auth-error" id="signupError"></div>
+    </form>
+
+    <div class="auth-switch">Revisa tu correo para confirmar la cuenta si tu proyecto Supabase lo requiere.</div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/supabaseClient.js"></script>
+<script src="assets/js/auth.js"></script>
+<script>
+(function () {
+  "use strict";
+  const $ = (s) => document.querySelector(s);
+
+  // Si ya hay sesión activa, saltar directo a la app correspondiente.
+  (async () => {
+    if (!window.msfSupabase) return;
+    const result = await window.msfAuth.getSessionProfile();
+    if (result) window.location.href = result.profile.role === "coach" ? "index.html" : "alumno.html";
+  })();
+
+  $("#tabLogin").addEventListener("click", () => {
+    $("#tabLogin").classList.replace("btn--ghost", "btn--primary");
+    $("#tabSignup").classList.replace("btn--primary", "btn--ghost");
+    $("#formLogin").classList.remove("hidden");
+    $("#formSignup").classList.add("hidden");
+  });
+  $("#tabSignup").addEventListener("click", () => {
+    $("#tabSignup").classList.replace("btn--ghost", "btn--primary");
+    $("#tabLogin").classList.replace("btn--primary", "btn--ghost");
+    $("#formSignup").classList.remove("hidden");
+    $("#formLogin").classList.add("hidden");
+  });
+
+  let signupRole = "coach";
+  function paintRole() {
+    $("#roleCoach").classList.toggle("btn--primary", signupRole === "coach");
+    $("#roleCoach").classList.toggle("btn--ghost", signupRole !== "coach");
+    $("#roleAlumno").classList.toggle("btn--primary", signupRole === "alumno");
+    $("#roleAlumno").classList.toggle("btn--ghost", signupRole !== "alumno");
+    $("#suCoachIdField").style.display = signupRole === "alumno" ? "" : "none";
+  }
+  $("#roleCoach").addEventListener("click", () => { signupRole = "coach"; paintRole(); });
+  $("#roleAlumno").addEventListener("click", () => { signupRole = "alumno"; paintRole(); });
+  paintRole();
+
+  $("#formLogin").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const err = $("#loginError");
+    err.style.display = "none";
+    try {
+      await window.msfAuth.signIn($("#loginEmail").value.trim(), $("#loginPassword").value);
+      const result = await window.msfAuth.getSessionProfile();
+      window.location.href = result.profile.role === "coach" ? "index.html" : "alumno.html";
+    } catch (ex) {
+      err.textContent = ex.message || "No se pudo iniciar sesión.";
+      err.style.display = "block";
+    }
+  });
+
+  $("#formSignup").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const err = $("#signupError");
+    err.style.display = "none";
+    try {
+      const name = $("#suName").value.trim();
+      const email = $("#suEmail").value.trim();
+      const pass = $("#suPassword").value;
+      if (signupRole === "coach") {
+        await window.msfAuth.signUpCoach(email, pass, name);
+      } else {
+        const coachId = $("#suCoachId").value.trim();
+        if (!coachId) throw new Error("Necesitas el ID de tu coach para registrarte.");
+        await window.msfAuth.signUpStudent(email, pass, name, coachId);
+      }
+      const result = await window.msfAuth.getSessionProfile();
+      if (result) { window.location.href = result.profile.role === "coach" ? "index.html" : "alumno.html"; return; }
+      err.style.display = "block";
+      err.style.color = "var(--lime)";
+      err.textContent = "Cuenta creada. Revisa tu correo para confirmar y luego inicia sesión.";
+    } catch (ex) {
+      err.style.color = "var(--coral)";
+      err.textContent = ex.message || "No se pudo crear la cuenta.";
+      err.style.display = "block";
+    }
+  });
+})();
+</script>
+</body>
+</html>

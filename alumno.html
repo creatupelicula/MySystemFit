@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>MySystemFit — Mi Entreno</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/css/tokens.css" />
+<link rel="stylesheet" href="assets/css/app.css" />
+<link rel="stylesheet" href="assets/css/alumno.css" />
+</head>
+<body>
+<div class="app-shell">
+
+  <header class="a-top">
+    <div class="avatar avatar--md avatar--ring">LM</div>
+    <div class="flex-1">
+      <div class="a-top__hi">Hola de nuevo,</div>
+      <div class="a-top__name">Laura 👋</div>
+    </div>
+    <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="icon-btn__dot">1</span></button>
+  </header>
+
+  <div class="a-body">
+
+    <!-- ============ HOME ============ -->
+    <section class="a-view is-active" id="a-home">
+      <!-- Anillo de progreso (Apple Watch style) -->
+      <div class="card card--pad-lg ring-block">
+        <div class="ring-wrap">
+          <svg width="220" height="220" viewBox="0 0 220 220" style="position:relative;z-index:1;transform:rotate(-90deg)">
+            <defs>
+              <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#B4F461"/><stop offset="100%" stop-color="#7CB518"/>
+              </linearGradient>
+              <filter id="ringShadow"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#B4F461" flood-opacity="0.5"/></filter>
+            </defs>
+            <circle cx="110" cy="110" r="90" fill="none" stroke="#1F2430" stroke-width="18"/>
+            <circle id="ringProg" cx="110" cy="110" r="90" fill="none" stroke="url(#ringGrad)" stroke-width="18" stroke-linecap="round"
+              stroke-dasharray="565" stroke-dashoffset="565" filter="url(#ringShadow)"/>
+          </svg>
+          <div class="ring-center">
+            <div class="ring-center__val" id="ringVal">0%</div>
+            <div class="ring-center__label">de tu objetivo</div>
+          </div>
+        </div>
+        <div class="row between mt-4" style="padding:0 8px">
+          <div class="mini-stat" style="flex:1;margin-right:8px"><span class="mini-stat__label">Peso actual</span><span class="mini-stat__val"><span id="homeWeightCurrent">—</span><span class="t3 fs-12">kg</span></span></div>
+          <div class="mini-stat flex-1"><span class="mini-stat__label">Meta</span><span class="mini-stat__val"><span id="homeWeightGoal">—</span><span class="t3 fs-12">kg</span></span></div>
+        </div>
+      </div>
+
+      <!-- Membresía por vencer -->
+      <div class="card member-card member-card--warn mt-4">
+        <div class="row between">
+          <div>
+            <div class="section-title" style="margin-bottom:4px">Tu membresía</div>
+            <div class="t3 text-sm">Plan mensual · Online</div>
+          </div>
+          <span class="badge badge--pend">Vence en 3 días</span>
+        </div>
+        <button class="btn btn--lime btn--block mt-4">Renovar ahora · $85</button>
+      </div>
+
+      <!-- CTA rutina de hoy -->
+      <button class="card card--hover mt-4" style="width:100%;text-align:left;display:flex;align-items:center;gap:16px;cursor:pointer" data-anav="rutina">
+        <div class="kpi__ico" style="width:48px;height:48px;background:var(--indigo-soft);color:var(--indigo-hi)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6.5 6.5h11M6.5 17.5h11M4 9v6M20 9v6M2 10.5v3M22 10.5v3"/></svg></div>
+        <div class="flex-1"><div style="font-weight:700;font-size:16px">Rutina de hoy</div><div class="t3 text-sm">Full body A · 5 ejercicios · ~50 min</div></div>
+        <svg viewBox="0 0 24 24" width="22" fill="none" stroke="var(--text-3)" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+
+      <div class="section-title mt-6">Esta semana</div>
+      <div class="row gap-3">
+        <div class="card stat-mini"><div class="mono fs-24 fw-700" style="color:var(--lime)">4</div><div class="t3 text-sm">Entrenos</div></div>
+        <div class="card stat-mini"><div class="mono fs-24 fw-700">🔥 12</div><div class="t3 text-sm">Racha días</div></div>
+        <div class="card stat-mini"><div class="mono fs-24 fw-700">−0.8</div><div class="t3 text-sm">kg semana</div></div>
+      </div>
+    </section>
+
+    <!-- ============ RUTINA ============ -->
+    <section class="a-view" id="a-rutina">
+      <div class="page-head mb-4"><div><h1 class="a-h1">Rutina de hoy</h1><p>Full body A · Lunes</p></div></div>
+      <div class="card mb-4" style="padding:14px 16px" id="progressBar">
+        <div class="row between mb-4" style="margin-bottom:8px"><span class="text-sm muted">Progreso de la sesión</span><span class="mono text-sm" id="sessCount">0/5</span></div>
+        <div style="height:8px;background:var(--bg-base);border-radius:999px;overflow:hidden"><div id="sessFill" style="height:100%;width:0;background:var(--lime);border-radius:999px;transition:width .3s var(--ease)"></div></div>
+      </div>
+
+      <button class="btn btn--lime btn--block btn--lg mt-6" id="finishSession">Terminar sesión</button>
+    </section>
+
+    <!-- ============ PROGRESO ============ -->
+    <section class="a-view" id="a-progreso">
+      <div class="page-head mb-4"><div><h1 class="a-h1">Mi progreso</h1><p>Sube tus fotos y sigue tu evolución</p></div></div>
+
+      <div class="dropzone" id="dropzone">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <div style="font-weight:600;color:var(--text-1)">Sube tu foto de la semana</div>
+        <div class="text-sm">Arrastra aquí o toca para elegir</div>
+        <input type="file" id="fileInput" accept="image/*" hidden>
+      </div>
+      <div id="dropPreview" class="mt-4"></div>
+
+      <div class="section-title mt-6">Tu línea de tiempo</div>
+      <div class="photo-grid">
+        <div class="photo-cell"><span>Sem 1</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+        <div class="photo-cell"><span>Sem 4</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+        <div class="photo-cell"><span>Sem 8</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+      </div>
+
+      <div class="section-title mt-6">Evolución de peso</div>
+      <div class="card" style="background:var(--bg-base)">
+        <div class="chart-wrap" id="aWeightChartWrap" data-chart-unit="kg" data-chart-values="67.5,66.8,66.1,65.6,65.2,64.8,64.5,64.2">
+          <svg class="chart-svg" viewBox="0 0 400 140" preserveAspectRatio="none">
+            <line class="chart-grid-line" x1="0" y1="35" x2="400" y2="35"/><line class="chart-grid-line" x1="0" y1="70" x2="400" y2="70"/><line class="chart-grid-line" x1="0" y1="105" x2="400" y2="105"/>
+            <defs><linearGradient id="aFill" x1="0" y1="0" x2="0" y2="1"><stop class="stop-lime" offset="0%" stop-opacity="0.28"/><stop class="stop-lime" offset="100%" stop-opacity="0"/></linearGradient></defs>
+            <path d="M0,30 C60,38 100,44 160,58 C220,72 260,80 320,92 C360,100 380,104 400,108 L400,140 L0,140 Z" fill="url(#aFill)"/>
+            <path class="chart-line-lime" d="M0,30 C60,38 100,44 160,58 C220,72 260,80 320,92 C360,100 380,104 400,108" fill="none" stroke-width="2.5"/>
+          </svg>
+          <div class="chart-hover-dot" id="aWeightHoverDot" style="background:var(--lime);box-shadow:0 0 0 4px var(--lime-soft)"></div>
+          <div class="chart-tooltip" id="aWeightTooltip"></div>
+        </div>
+        <div class="row between mt-4"><span class="t3 text-sm">Últimas 8 semanas</span><span class="badge badge--ok">−3.3 kg</span></div>
+      </div>
+    </section>
+
+    <!-- ============ COMUNIDAD ============ -->
+    <section class="a-view" id="a-comunidad">
+      <div class="page-head mb-4"><div><h1 class="a-h1">Comunidad</h1><p>Novedades de tu coach</p></div></div>
+    </section>
+
+    <!-- ============ CHAT ============ -->
+    <section class="a-view" id="a-chat">
+      <div class="page-head mb-4"><div><h1 class="a-h1">Diego · Coach</h1><p>Online · Activo ahora</p></div></div>
+      <div style="display:flex;flex-direction:column;gap:12px;min-height:420px"></div>
+      <div class="row gap-3 mt-4" style="position:sticky;bottom:0"><input class="input" placeholder="Escribe un mensaje…" id="chatInput"><button class="btn btn--primary btn--icon" id="chatSend"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>
+    </section>
+
+  </div>
+
+  <!-- FAB chat -->
+  <button class="chat-fab" data-anav="chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></button>
+
+  <!-- Rest timer -->
+  <div class="timer" id="restTimer"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="var(--lime)" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span class="timer__val" id="timerVal">01:00</span><button class="btn btn--ghost btn--sm" id="timerSkip">Saltar</button></div>
+
+  <!-- Bottom nav -->
+  <nav class="a-nav">
+    <button class="is-active" data-anav="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Inicio</button>
+    <button data-anav="rutina"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5h11M6.5 17.5h11M4 9v6M20 9v6M2 10.5v3M22 10.5v3"/></svg>Rutina</button>
+    <button data-anav="progreso"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 6l-9.5 9.5-5-5L1 18"/><polyline points="17 6 23 6 23 12"/></svg>Progreso</button>
+    <button data-anav="comunidad"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>Comunidad</button>
+    <button data-anav="chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>Coach</button>
+  </nav>
+</div>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/supabaseClient.js"></script>
+<script src="assets/js/auth.js"></script>
+<script src="assets/js/api.js"></script>
+<script src="assets/js/alumno.js"></script>
+</body>
+</html>

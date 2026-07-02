@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MySystemFit — Panel del Coach</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/css/tokens.css" />
+<link rel="stylesheet" href="assets/css/app.css" />
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand__logo">
+        <svg viewBox="0 0 24 24" width="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5 17.5 17.5M4 12l4-4M16 16l4-4M8 4l12 12M4 8l12 12"/></svg>
+      </div>
+      <div class="brand__name">MySystem<span>Fit</span></div>
+    </div>
+
+    <nav class="nav">
+      <button class="nav__item is-active" data-nav="dashboard">
+        <span class="nav__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg></span>
+        Dashboard
+      </button>
+      <button class="nav__item" data-nav="alumnos">
+        <span class="nav__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+        Alumnos
+      </button>
+      <button class="nav__item" data-nav="pagos">
+        <span class="nav__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></span>
+        Pagos
+      </button>
+      <button class="nav__item" data-nav="rutinas">
+        <span class="nav__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5h11M6.5 17.5h11M4 9v6M20 9v6M2 10.5v3M22 10.5v3"/></svg></span>
+        Rutinas
+      </button>
+      <button class="nav__item" data-nav="comunidad">
+        <span class="nav__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
+        Comunidad
+      </button>
+      <button class="nav__item" data-nav="mensajes">
+        <span class="nav__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v12H5.2L4 17.2V4z"/></svg></span>
+        Mensajes
+        <span class="nav__badge">3</span>
+      </button>
+      <div class="nav__label">Cuenta</div>
+      <button class="nav__item" data-nav="ajustes">
+        <span class="nav__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.82 1.17V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 3.6 15a1.65 1.65 0 0 0-1.51-1H2a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 3.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 8 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+        Ajustes
+      </button>
+    </nav>
+
+    <div class="sidebar__foot">
+      <div class="coach-card">
+        <div class="avatar avatar--md">DM</div>
+        <div class="coach-card__meta">
+          <div class="coach-card__name">Diego Morales</div>
+          <div class="coach-card__plan"><span class="badge badge--star" style="height:18px;padding:0 8px;font-size:10px">★ Star Plus</span></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn menu-toggle" id="menuToggle" aria-label="Menú">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar__title" id="pageTitle">Dashboard<small id="pageSub">Buenas tardes, Diego 👋</small></div>
+      <div class="topbar__spacer"></div>
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" placeholder="Buscar alumno, pago, rutina…" />
+      </div>
+      <a class="btn btn--ghost btn--sm topbar__applink" href="alumno.html" title="Abrir app del alumno" style="text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18"/></svg><span class="topbar__applink-txt">App alumno</span></a>
+      <button class="icon-btn" id="themeToggle" aria-label="Cambiar tema" title="Modo claro/oscuro">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+      <button class="icon-btn" aria-label="Notificaciones">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span class="icon-btn__dot">5</span>
+      </button>
+      <div class="avatar avatar--md avatar--ring">DM</div>
+    </header>
+
+    <div class="content">
+
+      <!-- ===================== DASHBOARD ===================== -->
+      <section class="view is-active" id="view-dashboard">
+        <div class="kpi-grid">
+          <div class="kpi kpi--indigo tilt">
+            <div class="kpi__top">
+              <span class="kpi__label">Ingresos del mes</span>
+              <span class="kpi__ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
+            </div>
+            <div class="kpi__value text-gradient" data-count="8420" data-prefix="$">$0</div>
+            <div class="kpi__foot">
+              <span class="kpi__delta up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>12.4%</span>
+              <svg class="kpi__spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline class="chart-line-indigo" fill="none" stroke-width="2" points="0,24 14,20 28,22 42,14 56,16 70,8 84,10 100,4"/></svg>
+            </div>
+          </div>
+          <div class="kpi kpi--lime tilt">
+            <div class="kpi__top">
+              <span class="kpi__label">Alumnos activos</span>
+              <span class="kpi__ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></span>
+            </div>
+            <div class="kpi__value text-gradient" data-count="47">0</div>
+            <div class="kpi__foot">
+              <span class="kpi__delta up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>3</span>
+              <svg class="kpi__spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline class="chart-line-lime" fill="none" stroke-width="2" points="0,20 14,18 28,19 42,15 56,16 70,12 84,13 100,9"/></svg>
+            </div>
+          </div>
+          <div class="kpi kpi--amber tilt">
+            <div class="kpi__top">
+              <span class="kpi__label">Nuevos este mes</span>
+              <span class="kpi__ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/></svg></span>
+            </div>
+            <div class="kpi__value" data-count="6">0</div>
+            <div class="kpi__foot">
+              <span class="kpi__delta up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>50%</span>
+              <svg class="kpi__spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline class="chart-line-amber" fill="none" stroke-width="2" points="0,26 14,24 28,20 42,22 56,14 70,16 84,10 100,8"/></svg>
+            </div>
+          </div>
+          <div class="kpi kpi--coral tilt">
+            <div class="kpi__top">
+              <span class="kpi__label">Pagos pendientes</span>
+              <span class="kpi__ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+            </div>
+            <div class="kpi__value" data-count="5">0</div>
+            <div class="kpi__foot">
+              <span class="kpi__delta down"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>2</span>
+              <svg class="kpi__spark" viewBox="0 0 100 30" preserveAspectRatio="none"><polyline class="chart-line-coral" fill="none" stroke-width="2" points="0,10 14,12 28,8 42,14 56,12 70,18 84,16 100,20"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card chart-card">
+            <div class="chart-head">
+              <div>
+                <h3>Ingresos</h3>
+                <div class="chart-total mono text-gradient">$8,420</div>
+              </div>
+              <div class="seg">
+                <button>Semana</button>
+                <button class="is-active">Mes</button>
+                <button>Año</button>
+              </div>
+            </div>
+            <div class="chart-wrap" id="revenueChartWrap" data-chart-max="8420" data-chart-values="4200,4800,5100,4600,5900,6400,7000,6700,7600,8000,8300,8420">
+              <svg class="chart-svg" viewBox="0 0 640 240" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop class="stop-indigo" offset="0%" stop-opacity="0.35"/>
+                    <stop class="stop-indigo" offset="100%" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+                <line class="chart-grid-line" x1="0" y1="60" x2="640" y2="60"/>
+                <line class="chart-grid-line" x1="0" y1="120" x2="640" y2="120"/>
+                <line class="chart-grid-line" x1="0" y1="180" x2="640" y2="180"/>
+                <path d="M0,190 C60,170 100,150 160,155 C220,160 260,110 320,120 C380,130 420,70 480,80 C540,90 590,50 640,45 L640,240 L0,240 Z" fill="url(#areaFill)"/>
+                <path class="chart-line-indigo" d="M0,190 C60,170 100,150 160,155 C220,160 260,110 320,120 C380,130 420,70 480,80 C540,90 590,50 640,45" fill="none" stroke-width="2.5" stroke-linecap="round"/>
+                <circle class="chart-dot-indigo" cx="480" cy="80" r="5" stroke-width="2.5"/>
+              </svg>
+              <div class="chart-hover-dot" id="revenueHoverDot"></div>
+              <div class="chart-tooltip" id="revenueTooltip"></div>
+            </div>
+            <div class="chart-legend">
+              <span><i style="background:var(--indigo)"></i>Ingresos 2024</span>
+              <span class="t3">Actualizado hace 3 min</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="section-title">Seguimientos pendientes <span class="muted">· hoy</span></div>
+            <div class="alert-list" id="followUpsList"></div>
+          </div>
+        </div>
+
+        <div class="card mt-6">
+          <div class="row between mb-4">
+            <div class="section-title" style="margin:0">Alumnos por vencer pago</div>
+            <button class="btn btn--ghost btn--sm" data-nav="pagos">Ver todos</button>
+          </div>
+        <div id="dueList"></div>
+        </div>
+      </section>
+
+      <!-- ===================== ALUMNOS ===================== -->
+      <section class="view" id="view-alumnos">
+        <div class="page-head">
+          <div><h1>Alumnos</h1><p>47 activos · 5 pendientes de pago</p></div>
+          <div class="row gap-3">
+            <div class="toggle-view" id="viewToggle">
+              <button class="is-active" data-vt="table" title="Tabla"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+              <button data-vt="cards" title="Tarjetas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></button>
+            </div>
+            <button class="btn btn--primary" data-modal="newStudent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nuevo alumno</button>
+          </div>
+        </div>
+
+        <div class="row gap-2 wrap mb-4">
+          <button class="pill is-active">Todos</button>
+          <button class="pill">Online</button>
+          <button class="pill">Presencial</button>
+          <button class="pill"><span class="badge__dot"></span>Activos</button>
+          <button class="pill">Pendientes</button>
+          <button class="pill">Atrasados</button>
+          <button class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>Objetivo</button>
+        </div>
+
+        <!-- Vista tabla -->
+        <div class="table-wrap" id="studentsTable">
+          <table class="table">
+            <thead><tr><th>Alumno</th><th>Estado</th><th>Entrenamiento</th><th>Objetivo</th><th>Próximo pago</th><th></th></tr></thead>
+            <tbody id="studentsTbody"></tbody>
+          </table>
+        </div>
+
+        <!-- Vista tarjetas -->
+        <div class="grid-cards hidden" id="studentsCards"></div>
+      </section>
+
+      <!-- ===================== PAGOS ===================== -->
+      <section class="view" id="view-pagos">
+        <div class="page-head"><div><h1>Pagos</h1><p>Control de cobros y membresías</p></div>
+          <button class="btn btn--primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Registrar pago</button>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi kpi--lime"><div class="kpi__top"><span class="kpi__label">Cobrado este mes</span></div><div class="kpi__value mono">$6,890</div></div>
+          <div class="kpi kpi--amber"><div class="kpi__top"><span class="kpi__label">Por cobrar</span></div><div class="kpi__value mono">$1,530</div></div>
+          <div class="kpi kpi--coral"><div class="kpi__top"><span class="kpi__label">Atrasados</span></div><div class="kpi__value mono">$255</div></div>
+          <div class="kpi kpi--indigo"><div class="kpi__top"><span class="kpi__label">Ticket promedio</span></div><div class="kpi__value mono">$102</div></div>
+        </div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th>Alumno</th><th>Concepto</th><th>Monto</th><th>Vencimiento</th><th>Estado</th><th></th></tr></thead>
+            <tbody id="paymentsTbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===================== RUTINAS (BUILDER) ===================== -->
+      <section class="view" id="view-rutinas">
+        <div class="page-head">
+          <div><h1>Constructor de rutinas <span class="badge badge--star">★ Star Plus</span></h1><p id="builderTitle">Selecciona un alumno desde su ficha → pestaña Rutina → "Editar rutina"</p></div>
+          <div class="row gap-3"><button class="btn btn--primary" id="btnSaveRoutine">Guardar y enviar</button></div>
+        </div>
+        <div class="builder">
+          <div class="builder__board" id="builderBoard">
+            <div class="day-col" data-day="lunes">
+              <div class="day-col__head"><span class="day-col__title">Lunes</span><span class="day-col__count">Pecho · 4</span></div>
+              <div class="ex-card" draggable="true"><div class="ex-card__name"><svg viewBox="0 0 24 24" width="14" fill="none" stroke="var(--indigo)" stroke-width="2"><path d="M6 6h12M6 18h12M4 9v6M20 9v6"/></svg>Press banca</div><div class="ex-card__grid"><div class="ex-input"><label>Series</label><input value="4"></div><div class="ex-input"><label>Reps</label><input value="8"></div><div class="ex-input"><label>Kg</label><input value="70"></div><div class="ex-input"><label>Desc</label><input value="90"></div></div></div>
+              <div class="ex-card" draggable="true"><div class="ex-card__name"><svg viewBox="0 0 24 24" width="14" fill="none" stroke="var(--indigo)" stroke-width="2"><path d="M6 6h12M6 18h12M4 9v6M20 9v6"/></svg>Press inclinado</div><div class="ex-card__grid"><div class="ex-input"><label>Series</label><input value="3"></div><div class="ex-input"><label>Reps</label><input value="10"></div><div class="ex-input"><label>Kg</label><input value="26"></div><div class="ex-input"><label>Desc</label><input value="75"></div></div></div>
+              <div class="ex-card" draggable="true"><div class="ex-card__name"><svg viewBox="0 0 24 24" width="14" fill="none" stroke="var(--indigo)" stroke-width="2"><path d="M6 6h12M6 18h12M4 9v6M20 9v6"/></svg>Aperturas</div><div class="ex-card__grid"><div class="ex-input"><label>Series</label><input value="3"></div><div class="ex-input"><label>Reps</label><input value="12"></div><div class="ex-input"><label>Kg</label><input value="14"></div><div class="ex-input"><label>Desc</label><input value="60"></div></div></div>
+              <div class="day-add">+ Añadir ejercicio</div>
+            </div>
+            <div class="day-col" data-day="martes">
+              <div class="day-col__head"><span class="day-col__title">Martes</span><span class="day-col__count">Espalda · 3</span></div>
+              <div class="ex-card" draggable="true"><div class="ex-card__name"><svg viewBox="0 0 24 24" width="14" fill="none" stroke="var(--indigo)" stroke-width="2"><path d="M6 6h12M6 18h12M4 9v6M20 9v6"/></svg>Dominadas</div><div class="ex-card__grid"><div class="ex-input"><label>Series</label><input value="4"></div><div class="ex-input"><label>Reps</label><input value="8"></div><div class="ex-input"><label>Kg</label><input value="0"></div><div class="ex-input"><label>Desc</label><input value="90"></div></div></div>
+              <div class="ex-card" draggable="true"><div class="ex-card__name"><svg viewBox="0 0 24 24" width="14" fill="none" stroke="var(--indigo)" stroke-width="2"><path d="M6 6h12M6 18h12M4 9v6M20 9v6"/></svg>Remo con barra</div><div class="ex-card__grid"><div class="ex-input"><label>Series</label><input value="4"></div><div class="ex-input"><label>Reps</label><input value="10"></div><div class="ex-input"><label>Kg</label><input value="50"></div><div class="ex-input"><label>Desc</label><input value="80"></div></div></div>
+              <div class="day-add">+ Añadir ejercicio</div>
+            </div>
+            <div class="day-col" data-day="miercoles">
+              <div class="day-col__head"><span class="day-col__title">Miércoles</span><span class="day-col__count">Pierna · 4</span></div>
+              <div class="ex-card" draggable="true"><div class="ex-card__name"><svg viewBox="0 0 24 24" width="14" fill="none" stroke="var(--indigo)" stroke-width="2"><path d="M6 6h12M6 18h12M4 9v6M20 9v6"/></svg>Sentadilla</div><div class="ex-card__grid"><div class="ex-input"><label>Series</label><input value="5"></div><div class="ex-input"><label>Reps</label><input value="6"></div><div class="ex-input"><label>Kg</label><input value="90"></div><div class="ex-input"><label>Desc</label><input value="120"></div></div></div>
+              <div class="day-add">+ Añadir ejercicio</div>
+            </div>
+            <div class="day-col" data-day="jueves">
+              <div class="day-col__head"><span class="day-col__title">Jueves</span><span class="day-col__count">Descanso</span></div>
+              <div class="day-add" style="margin-top:auto;margin-bottom:auto">Día de descanso<br>+ Añadir ejercicio</div>
+            </div>
+          </div>
+
+          <aside class="ex-library">
+            <div class="section-title">Biblioteca</div>
+            <div class="search" style="width:100%;margin-bottom:12px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input placeholder="Buscar ejercicio…" style="height:38px"></div>
+            <div class="ex-lib-item"><div class="ex-lib-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6h12M6 18h12M4 9v6M20 9v6"/></svg></div><div><div class="fs-13 fw-600">Press militar</div><small>Hombro</small></div></div>
+            <div class="ex-lib-item"><div class="ex-lib-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6h12M6 18h12M4 9v6M20 9v6"/></svg></div><div><div class="fs-13 fw-600">Curl bíceps</div><small>Brazo</small></div></div>
+            <div class="ex-lib-item"><div class="ex-lib-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6h12M6 18h12M4 9v6M20 9v6"/></svg></div><div><div class="fs-13 fw-600">Peso muerto</div><small>Espalda / Pierna</small></div></div>
+            <div class="ex-lib-item"><div class="ex-lib-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6h12M6 18h12M4 9v6M20 9v6"/></svg></div><div><div class="fs-13 fw-600">Zancadas</div><small>Pierna</small></div></div>
+            <div class="ex-lib-item"><div class="ex-lib-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6h12M6 18h12M4 9v6M20 9v6"/></svg></div><div><div class="fs-13 fw-600">Plancha</div><small>Core</small></div></div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- ===================== COMUNIDAD ===================== -->
+      <section class="view" id="view-comunidad">
+        <div class="page-head"><div><h1>Comunidad</h1><p>Publica novedades y motiva a tus alumnos</p></div>
+          <button class="btn btn--primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nueva publicación</button>
+        </div>
+        <div style="max-width:620px;margin:0 auto">
+          <form id="formNewPost" class="card mb-4">
+            <div class="row gap-3">
+              <div class="avatar avatar--md">DM</div>
+              <input class="input" id="newPostBody" placeholder="Comparte algo con tu comunidad…" style="height:44px">
+              <button type="submit" class="btn btn--primary btn--sm">Publicar</button>
+            </div>
+          </form>
+          <div id="communityFeed"></div>
+        </div>
+      </section>
+
+      <!-- ===================== MENSAJES ===================== -->
+      <section class="view" id="view-mensajes">
+        <div class="page-head"><div><h1>Mensajes</h1><p>Conversaciones con tus alumnos</p></div></div>
+        <div class="card messages-panel">
+          <div class="messages-list" id="conversationsList"></div>
+          <div class="messages-thread">
+            <div style="padding:16px 20px;border-bottom:1px solid var(--border)" class="row gap-3"><div class="avatar avatar--md" id="threadAvatar"></div><div><div class="fw-600" id="threadName"></div></div></div>
+            <div class="messages-thread__body" id="threadBody"></div>
+            <form id="formSendMessage" style="padding:16px 20px;border-top:1px solid var(--border)" class="row gap-3">
+              <input class="input" id="messageInput" placeholder="Escribe un mensaje…" autocomplete="off">
+              <button type="submit" class="btn btn--primary btn--icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== AJUSTES ===================== -->
+      <section class="view" id="view-ajustes">
+        <div class="page-head"><div><h1>Ajustes</h1><p>Tu cuenta y preferencias</p></div></div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="section-title">Perfil del coach</div>
+            <div class="row gap-4 mb-4"><div class="avatar avatar--xl">DM</div><div><p class="t3 text-sm">Tu ID de coach (compártelo con tus alumnos para que se registren):</p><p class="mono text-sm" id="coachIdDisplay" style="word-break:break-all"></p></div></div>
+            <form id="formProfile">
+              <div class="field"><label>Nombre</label><input class="input" id="profName"></div>
+              <div class="field"><label>Email</label><input class="input" id="profEmail" disabled></div>
+              <div class="field"><label>Especialidad</label><input class="input" id="profSpecialty"></div>
+              <button type="submit" class="btn btn--primary">Guardar cambios</button>
+              <button type="button" class="btn btn--ghost" id="btnLogout">Cerrar sesión</button>
+            </form>
+          </div>
+          <div class="stack gap-4">
+            <div class="card">
+              <div class="section-title">Plan</div>
+              <div class="row between"><div><div style="font-weight:700;font-size:18px">Star Plus <span class="badge badge--star">★</span></div><p class="t3 text-sm">Rutinas ilimitadas · Comunidad · Analytics</p></div><div class="mono" style="font-size:22px;font-weight:700">$49<span class="t3 fs-13">/mes</span></div></div>
+              <button class="btn btn--ghost btn--block mt-4">Gestionar suscripción</button>
+            </div>
+            <div class="card">
+              <div class="section-title">Apariencia</div>
+              <div class="row between"><span class="muted text-sm">Modo oscuro / claro</span><button class="btn btn--ghost btn--sm" id="themeToggle2">Alternar tema</button></div>
+            </div>
+            <div class="card">
+              <div class="section-title">Zona de peligro</div>
+              <p class="t3 text-sm mb-4">Eliminar tu cuenta borra todos los datos de forma permanente.</p>
+              <button class="btn btn--danger" data-modal="deleteAccount">Eliminar cuenta</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<!-- ============ DRAWER: FICHA ALUMNO ============ -->
+<div class="drawer-overlay" id="drawerOverlay"></div>
+<aside class="drawer" id="studentDrawer">
+  <div class="drawer__head">
+    <button class="icon-btn drawer__close" id="drawerClose"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    <div class="drawer__id">
+      <div class="avatar avatar--lg" id="dwAvatar">LM</div>
+      <div>
+        <div class="drawer__name" id="dwName">Laura Méndez</div>
+        <div class="drawer__tags">
+          <span class="badge badge--ok" id="dwState">Activa</span>
+          <span class="badge badge--plan">28 años</span>
+          <span class="badge badge--star">★ Star</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="tabs" id="dwTabs">
+    <button class="tab is-active" data-tab="info">Info</button>
+    <button class="tab" data-tab="pagos">Pagos</button>
+    <button class="tab" data-tab="rutina">Rutina</button>
+    <button class="tab" data-tab="progreso">Progreso</button>
+    <button class="tab" data-tab="segui">Seguimientos</button>
+    <button class="tab" data-tab="notas">Notas</button>
+  </div>
+  <div class="drawer__body">
+    <div class="tab-panel is-active" data-panel="info">
+      <div class="grid-2" style="grid-template-columns:1fr 1fr;gap:12px">
+        <div class="mini-stat"><span class="mini-stat__label">Objetivo</span><span class="mini-stat__val" id="dwGoal" style="font-size:15px;font-family:var(--font-sans)">—</span></div>
+        <div class="mini-stat"><span class="mini-stat__label">Entrenamiento</span><span class="mini-stat__val" id="dwType" style="font-size:15px;font-family:var(--font-sans)">—</span></div>
+        <div class="mini-stat"><span class="mini-stat__label">Peso actual</span><span class="mini-stat__val"><span id="dwWeight">—</span><span class="t3 fs-13">kg</span></span></div>
+        <div class="mini-stat"><span class="mini-stat__label">Altura</span><span class="mini-stat__val"><span id="dwHeight">—</span><span class="t3 fs-13">m</span></span></div>
+      </div>
+      <div class="card mt-4 card--flat">
+        <div class="section-title">Contacto</div>
+        <div class="kv mb-2"><span>Email</span><span id="dwEmail">—</span></div>
+        <div class="kv mb-2"><span>Teléfono</span><span id="dwPhone">—</span></div>
+        <div class="kv"><span>Miembro desde</span><span id="dwSince">—</span></div>
+      </div>
+    </div>
+    <div class="tab-panel" data-panel="pagos">
+      <div id="dwPayments"></div>
+    </div>
+    <div class="tab-panel" data-panel="rutina">
+      <div class="card card--flat"><div class="section-title">Rutina actual · Full body 3 días</div><div class="kv mb-2"><span>Lunes</span><span>Full body A</span></div><div class="kv mb-2"><span>Miércoles</span><span>Full body B</span></div><div class="kv"><span>Viernes</span><span>Full body C</span></div></div>
+      <button class="btn btn--primary btn--block mt-4" data-nav="rutinas">Editar rutina</button>
+    </div>
+    <div class="tab-panel" data-panel="progreso">
+      <div class="section-title">Comparativa</div>
+      <div class="compare mb-4">
+        <div class="compare__ph"><span>Semana 1</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+        <div class="compare__ph"><span>Semana 8</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+      </div>
+      <div class="section-title">Evolución de peso</div>
+      <div class="card card--flat">
+        <div class="chart-wrap" id="weightChartWrap" data-chart-unit="kg" data-chart-values="67.5,66.8,66.1,65.6,65.2,64.8,64.5,64.2">
+          <svg class="chart-svg" viewBox="0 0 560 160" preserveAspectRatio="none">
+            <line class="chart-grid-line" x1="0" y1="40" x2="560" y2="40"/><line class="chart-grid-line" x1="0" y1="80" x2="560" y2="80"/><line class="chart-grid-line" x1="0" y1="120" x2="560" y2="120"/>
+            <defs><linearGradient id="wFill" x1="0" y1="0" x2="0" y2="1"><stop class="stop-lime" offset="0%" stop-opacity="0.28"/><stop class="stop-lime" offset="100%" stop-opacity="0"/></linearGradient></defs>
+            <path d="M0,40 C80,50 120,55 200,70 C280,85 320,95 400,105 C480,115 520,120 560,125 L560,160 L0,160 Z" fill="url(#wFill)"/>
+            <path class="chart-line-lime" d="M0,40 C80,50 120,55 200,70 C280,85 320,95 400,105 C480,115 520,120 560,125" fill="none" stroke-width="2.5"/>
+          </svg>
+          <div class="chart-hover-dot" id="weightHoverDot" style="background:var(--lime);box-shadow:0 0 0 4px var(--lime-soft)"></div>
+          <div class="chart-tooltip" id="weightTooltip"></div>
+        </div>
+        <div class="row between mt-4"><span class="t3 text-sm">67.5 kg → 64.2 kg</span><span class="badge badge--ok">−3.3 kg</span></div>
+      </div>
+    </div>
+    <div class="tab-panel" data-panel="segui">
+      <div class="alert-item"><span class="check is-done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></span><div><div class="alert-item__txt">Revisar fotos semana 8</div><div class="alert-item__sub">Completado</div></div></div>
+      <div class="alert-item"><span class="check"></span><div><div class="alert-item__txt">Ajustar calorías (-100)</div><div class="alert-item__sub">Pendiente</div></div></div>
+      <div class="alert-item"><span class="check"></span><div><div class="alert-item__txt">Llamada mensual de seguimiento</div><div class="alert-item__sub">Programar</div></div></div>
+    </div>
+    <div class="tab-panel" data-panel="notas">
+      <div class="private-note">
+        <div class="private-note__tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><line x1="4" y1="4" x2="20" y2="20"/></svg>Solo tú puedes ver esto</div>
+        <textarea id="dwNotes" class="input" style="width:100%;min-height:120px;resize:vertical" placeholder="Notas privadas sobre este alumno…"></textarea>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ============ MODALES ============ -->
+<div class="modal-overlay" id="modal-deleteAccount">
+  <div class="modal">
+    <div class="modal__ico danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></div>
+    <h3>¿Eliminar tu cuenta?</h3>
+    <p>Esta acción es permanente. Se borrarán todos tus alumnos, rutinas y registros de pago. No se puede deshacer.</p>
+    <div class="modal__actions"><button class="btn btn--ghost js-modal-close">Cancelar</button><button class="btn btn--danger" id="btnConfirmDelete" style="background:var(--coral);color:#fff;border-color:transparent">Sí, eliminar</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-newStudent">
+  <div class="modal" style="max-width:480px">
+    <div class="modal__ico" style="background:var(--indigo-soft);color:var(--indigo-hi)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/></svg></div>
+    <h3>Nuevo alumno</h3>
+    <p>Registra un alumno y empieza a gestionar su progreso.</p>
+    <form id="formNewStudent">
+      <div class="field"><label>Nombre completo</label><input class="input" id="nsName" required placeholder="Ej. Laura Méndez"></div>
+      <div class="row gap-3"><div class="field" style="flex:1"><label>Tipo</label><select class="select" id="nsType"><option>Online</option><option>Presencial</option></select></div><div class="field" style="flex:1"><label>Objetivo</label><select class="select" id="nsGoal"><option>Pérdida de grasa</option><option>Hipertrofia</option><option>Recomposición</option></select></div></div>
+      <div class="modal__actions"><button type="button" class="btn btn--ghost js-modal-close">Cancelar</button><button type="submit" class="btn btn--primary">Crear alumno</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- ============ TOASTS ============ -->
+<div class="toast-stack" id="toastStack"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/supabaseClient.js"></script>
+<script src="assets/js/auth.js"></script>
+<script src="assets/js/api.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

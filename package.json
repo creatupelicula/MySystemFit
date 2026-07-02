@@ -1,0 +1,9 @@
+{
+  "name": "mysystemfit-crm",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Panel del coach + app del alumno — MySystemFit, sobre Supabase.",
+  "scripts": {
+    "build": "node scripts/generate-config.js"
+  }
+}

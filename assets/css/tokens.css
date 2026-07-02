@@ -1,0 +1,137 @@
+/* ============================================================
+   MySystemFit — Design Tokens
+   "Tech premium con pulso de energía"
+   ============================================================ */
+
+:root {
+  /* ---- Color · Superficies (dark, default) ---- */
+  --bg-base: #0B0D12;          /* casi negro con tinte azulado */
+  --surface: #13161D;          /* cards / paneles */
+  --surface-2: #181C25;        /* modales / dropdowns (elevada) */
+  --surface-3: #1E2330;        /* hover / activo sutil */
+  --border: #1F2430;           /* borde 1px */
+  --border-strong: #2A3040;
+
+  /* ---- Color · Acento ---- */
+  --indigo: #6C5CE7;           /* acento primario */
+  --indigo-hi: #8577F0;        /* hover del primario */
+  --indigo-lo: #5546C9;
+  --indigo-soft: rgba(108, 92, 231, 0.14);
+  --indigo-glow: rgba(108, 92, 231, 0.35);
+
+  --lime: #B4F461;             /* energía / progreso positivo */
+  --lime-hi: #C7F883;
+  --lime-soft: rgba(180, 244, 97, 0.13);
+  --lime-glow: rgba(180, 244, 97, 0.30);
+
+  --coral: #FF6B6B;            /* alerta / atrasado */
+  --coral-soft: rgba(255, 107, 107, 0.13);
+  --coral-glow: rgba(255, 107, 107, 0.30);
+
+  --amber: #FFB84D;            /* pendiente */
+  --amber-soft: rgba(255, 184, 77, 0.13);
+  --amber-glow: rgba(255, 184, 77, 0.28);
+
+  /* ---- Color · Texto ---- */
+  --text-1: #F5F6F8;           /* primario */
+  --text-2: #9AA1AE;           /* secundario */
+  --text-3: #5C6270;           /* terciario / disabled */
+
+  /* ---- Tipografía ---- */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", ui-monospace, monospace;
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semi: 600;
+  --fw-bold: 700;
+
+  /* ---- Radios ---- */
+  --r-sm: 8px;                 /* inputs, badges */
+  --r-md: 14px;                /* cards */
+  --r-lg: 20px;                /* modales, paneles grandes */
+  --r-full: 999px;
+
+  /* ---- Espaciado (grid 8px) ---- */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+  --s-12: 48px;
+  --s-16: 64px;
+
+  /* ---- Sombras ---- */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 24px -8px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 24px 60px -20px rgba(0, 0, 0, 0.75);
+  --glow-indigo: 0 0 40px -10px var(--indigo-glow);
+  --glow-lime: 0 0 40px -10px var(--lime-glow);
+  --glow-coral: 0 0 40px -10px var(--coral-glow);
+  --glow-amber: 0 0 40px -10px var(--amber-glow);
+
+  /* ---- Glass ---- */
+  --glass-bg: rgba(19, 22, 29, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.06);
+  --glass-blur: blur(20px);
+
+  /* ---- Gradientes de acento ---- */
+  --gradient-hero: linear-gradient(135deg, var(--indigo-hi), var(--lime));
+  --gradient-mesh: radial-gradient(900px 500px at 12% -8%, rgba(108, 92, 231, 0.10), transparent 60%),
+                   radial-gradient(800px 480px at 100% 4%, rgba(180, 244, 97, 0.05), transparent 55%);
+
+  /* ---- Motion ---- */
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 150ms;
+  --dur: 200ms;
+  --dur-slow: 320ms;
+
+  /* ---- Layout ---- */
+  --sidebar-w: 248px;
+  --topbar-h: 68px;
+  --maxw: 1440px;
+}
+
+/* ============ Modo claro (toggle secundario) ============ */
+[data-theme="light"] {
+  --bg-base: #F7F8FA;
+  --surface: #FFFFFF;
+  --surface-2: #FFFFFF;
+  --surface-3: #EEF0F4;
+  --border: #E5E8EE;
+  --border-strong: #D3D8E2;
+
+  --indigo: #5B4BD6;
+  --indigo-hi: #6C5CE7;
+  --indigo-soft: rgba(108, 92, 231, 0.10);
+
+  --lime: #7CB518;             /* saturación reducida para legibilidad */
+  --lime-soft: rgba(124, 181, 24, 0.14);
+
+  --coral: #E5484D;
+  --coral-soft: rgba(229, 72, 77, 0.10);
+  --amber: #E08600;
+  --amber-soft: rgba(224, 134, 0, 0.12);
+
+  --text-1: #14161C;
+  --text-2: #5C6270;
+  --text-3: #9AA1AE;
+
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(0, 0, 0, 0.06);
+
+  --shadow-md: 0 8px 24px -10px rgba(20, 22, 28, 0.18);
+  --shadow-lg: 0 24px 60px -20px rgba(20, 22, 28, 0.22);
+
+  /* ---- Glows recalibrados para fondo claro ---- */
+  --indigo-glow: rgba(91, 75, 214, 0.22);
+  --lime-glow: rgba(124, 181, 24, 0.22);
+  --coral-glow: rgba(229, 72, 77, 0.20);
+  --amber-glow: rgba(224, 134, 0, 0.20);
+
+  --gradient-mesh: radial-gradient(900px 500px at 12% -8%, rgba(91, 75, 214, 0.07), transparent 60%),
+                   radial-gradient(800px 480px at 100% 4%, rgba(124, 181, 24, 0.05), transparent 55%);
+}
