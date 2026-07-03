@@ -607,18 +607,28 @@
     } catch (ex) { errToast(ex, "No se pudo cerrar la cuenta"); }
   });
 
-  /* ---------- Tilt 3D en cards ---------- */
+  /* ---------- Tilt 3D + glare en cards ----------
+     La card rota en perspectiva y expone --gx/--gy para que el
+     brillo radial (.tilt::after) siga al cursor. */
   function attachTilt(el, maxDeg = 6) {
     el.addEventListener("mousemove", (e) => {
       const r = el.getBoundingClientRect();
       const px = (e.clientX - r.left) / r.width - 0.5;
       const py = (e.clientY - r.top) / r.height - 0.5;
       el.style.transform = `perspective(700px) rotateY(${(px * maxDeg).toFixed(2)}deg) rotateX(${(-py * maxDeg).toFixed(2)}deg) translateY(-2px)`;
+      el.style.setProperty("--gx", ((px + 0.5) * 100).toFixed(1) + "%");
+      el.style.setProperty("--gy", ((py + 0.5) * 100).toFixed(1) + "%");
     });
     el.addEventListener("mouseleave", () => { el.style.transform = ""; });
   }
   const supportsHoverTilt = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
-  if (supportsHoverTilt) $$(".tilt").forEach((el) => attachTilt(el));
+  if (supportsHoverTilt) {
+    $$(".tilt").forEach((el) => attachTilt(el));
+    // Cards interactivas también reciben tilt sutil + glare
+    $$(".card--hover, .border-conic").forEach((el) => {
+      if (!el.classList.contains("tilt")) { el.classList.add("tilt"); attachTilt(el, 3.5); }
+    });
+  }
 
   /* ---------- Tooltip interactivo en gráficos SVG ---------- */
   function attachChartTooltip(wrap, { values, prefix = "", suffix = "" }) {

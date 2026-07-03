@@ -10,14 +10,14 @@ window.msfTheme = (function () {
 
   /* Paleta de acentos sugeridos (el primero es el default de la marca) */
   const PRESETS = [
-    { name: "Índigo", hex: "#6C5CE7" },
-    { name: "Lima", hex: "#7CB518" },
-    { name: "Cian", hex: "#0FB5BA" },
+    { name: "Azul eléctrico", hex: "#2E6BFF" },
+    { name: "Rojo energía", hex: "#FF2E4D" },
+    { name: "Cian", hex: "#39D0FF" },
     { name: "Violeta", hex: "#9B5CF6" },
-    { name: "Coral", hex: "#FF6B6B" },
     { name: "Ámbar", hex: "#F59E0B" },
     { name: "Rosa", hex: "#EC4899" },
-    { name: "Azul", hex: "#3B82F6" },
+    { name: "Verde", hex: "#22C55E" },
+    { name: "Azul cielo", hex: "#3B82F6" },
   ];
 
   /* ---- utilidades de color ---- */
@@ -55,6 +55,12 @@ window.msfTheme = (function () {
   function toggleMode() { const next = getMode() === "light" ? "dark" : "light"; setMode(next); return next; }
   function setAccent(hex) { localStorage.setItem(KEY_ACCENT, hex); applyAccent(hex); }
   function reset() { localStorage.removeItem(KEY_ACCENT); applyAccent(PRESETS[0].hex); }
+
+  /* Migración: si el acento guardado es el índigo viejo de la marca
+     anterior, se resetea al azul eléctrico actual. */
+  if ((localStorage.getItem(KEY_ACCENT) || "").toLowerCase() === "#6c5ce7") {
+    localStorage.removeItem(KEY_ACCENT);
+  }
 
   /* Aplicar de inmediato al cargar el script */
   applyMode(getMode());

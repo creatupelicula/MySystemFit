@@ -6,12 +6,13 @@
 <title>MySystemFit — Panel del Coach</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="assets/css/tokens.css" />
 <link rel="stylesheet" href="assets/css/app.css" />
 <script src="assets/js/theme.js"></script>
 </head>
 <body>
+<div class="aurora-deep"></div>
 <div class="app">
 
   <!-- ============ SIDEBAR ============ -->
@@ -335,7 +336,7 @@
       <section class="view" id="view-referidos">
         <div class="page-head"><div><h1>Referidos</h1><p>Invita a otros coaches y haz crecer tu red</p></div></div>
         <div class="grid-2">
-          <div class="card">
+          <div class="card border-conic">
             <div class="section-title">Tu código personal</div>
             <p class="t3 text-sm mb-4">Compártelo con otros coaches: cuando se registren con tu código, quedarán vinculados a ti como referidos.</p>
             <div class="row gap-3">
@@ -366,7 +367,7 @@
             </form>
           </div>
           <div class="stack gap-4">
-            <div class="card">
+            <div class="card border-conic">
               <div class="section-title">Plan</div>
               <div class="row between"><div><div style="font-weight:700;font-size:18px"><span id="planName">Star</span> <span class="badge badge--star">★</span></div><p class="t3 text-sm" id="planDesc"></p></div><div class="mono" id="planUsage" style="font-size:18px;font-weight:700"></div></div>
               <div class="mt-4" style="height:8px;background:var(--bg-base);border-radius:999px;overflow:hidden"><div id="planUsageBar" style="height:100%;width:0;background:var(--indigo);border-radius:999px;transition:width .4s var(--ease)"></div></div>
@@ -379,7 +380,7 @@
                 <div class="swatches" id="accentSwatches"></div>
                 <div class="row gap-3 mt-4">
                   <label class="swatch-custom" title="Color personalizado">
-                    <input type="color" id="accentCustom" value="#6C5CE7">
+                    <input type="color" id="accentCustom" value="#2E6BFF">
                     <span>Personalizado</span>
                   </label>
                   <button class="btn btn--ghost btn--sm" id="accentReset">Restablecer</button>

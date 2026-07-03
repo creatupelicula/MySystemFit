@@ -6,29 +6,59 @@
 <title>MySystemFit — Iniciar sesión</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="assets/css/tokens.css" />
 <link rel="stylesheet" href="assets/css/app.css" />
 <script src="assets/js/theme.js"></script>
 <style>
-  .auth-wrap { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
-  .auth-card { width: 100%; max-width: 400px; }
+  .auth-wrap { min-height: 100vh; display: grid; place-items: center; padding: 24px; perspective: 1200px; }
+  .auth-card {
+    width: 100%; max-width: 410px;
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-lg), 0 0 80px -30px var(--indigo-glow);
+    animation: authFloat 7s ease-in-out infinite;
+  }
+  @keyframes authFloat {
+    0%, 100% { transform: translateY(0) rotateX(0deg); }
+    50% { transform: translateY(-8px) rotateX(0.8deg); }
+  }
+  @media (prefers-reduced-motion: reduce) { .auth-card { animation: none; } }
+  .auth-logo {
+    position: relative;
+  }
+  .auth-logo::before {
+    content: ""; position: absolute; inset: -10px; border-radius: 50%;
+    background: radial-gradient(circle, var(--indigo-glow), transparent 70%);
+    animation: logoPulse 3s ease-in-out infinite; z-index: -1;
+  }
+  @keyframes logoPulse {
+    0%, 100% { opacity: 0.5; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.25); }
+  }
+  .auth-title { text-align: center; font-family: var(--font-display); font-size: 20px; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 4px; }
+  .auth-sub { text-align: center; font-size: 13px; color: var(--text-2); margin-bottom: 20px; }
   .auth-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
   .auth-tabs button { flex: 1; }
   .auth-role { display: flex; gap: 8px; margin-bottom: 16px; }
   .auth-role button { flex: 1; }
   .auth-error { color: var(--coral); font-size: 13px; margin-top: 8px; display: none; }
-  .auth-switch { text-align: center; margin-top: 16px; font-size: 13px; }
+  .auth-switch { text-align: center; margin-top: 16px; font-size: 13px; color: var(--text-3); }
   .auth-switch a { color: var(--indigo-hi); cursor: pointer; text-decoration: underline; }
 </style>
 </head>
 <body>
+<div class="aurora-deep"></div>
 <div class="auth-wrap">
   <div class="card auth-card">
-    <div class="brand" style="margin-bottom:24px;justify-content:center">
+    <div class="brand auth-logo" style="margin-bottom:16px;justify-content:center">
       <div class="brand__logo"><svg viewBox="0 0 24 24" width="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5 17.5 17.5M4 12l4-4M16 16l4-4M8 4l12 12M4 8l12 12"/></svg></div>
-      <div class="brand__name">MySystem<span>Fit</span></div>
+      <div class="brand__name">MySystem<span class="text-gradient">Fit</span></div>
     </div>
+    <div class="auth-title">Tu sistema. Tu progreso.</div>
+    <div class="auth-sub">Entrena, gestiona y crece con MySystemFit</div>
 
     <div class="auth-tabs">
       <button class="btn btn--primary" id="tabLogin" type="button">Iniciar sesión</button>

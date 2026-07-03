@@ -82,7 +82,7 @@
   });
 
   function celebrate() {
-    const colors = ["#B4F461", "#6C5CE7", "#8577F0", "#C7F883"];
+    const colors = ["#FF2E4D", "#2E6BFF", "#39D0FF", "#5B8BFF"];
     const burst = document.createElement("div");
     burst.className = "confetti-burst";
     for (let i = 0; i < 26; i++) {

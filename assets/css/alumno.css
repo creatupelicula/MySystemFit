@@ -6,7 +6,7 @@
   position: relative; z-index: 1;
   padding-bottom: 96px;
   border-left: 1px solid var(--border); border-right: 1px solid var(--border);
-  background: linear-gradient(180deg, rgba(108,92,231,0.04), transparent 240px);
+  background: linear-gradient(180deg, rgba(46,107,255,0.05), transparent 240px);
 }
 
 .a-top {
@@ -31,7 +31,7 @@
   background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
   border-top: 1px solid var(--glass-border);
 }
-.a-nav button { display: flex; flex-direction: column; align-items: center; gap: 3px; color: var(--text-3); font-size: 10px; font-weight: var(--fw-medium); transition: color var(--dur); }
+.a-nav button { display: flex; flex-direction: column; align-items: center; gap: 3px; min-height: 44px; color: var(--text-3); font-size: 10px; font-weight: var(--fw-medium); transition: color var(--dur); }
 .a-nav button svg { width: 22px; height: 22px; }
 .a-nav button.is-active { color: var(--indigo-hi); }
 
@@ -61,7 +61,7 @@
   transition: background var(--dur), border-color var(--dur);
 }
 .ex-check svg { width: 16px; height: 16px; }
-.ex-check.done { background: var(--lime); border-color: var(--lime); color: #0B0D12; }
+.ex-check.done { background: var(--lime); border-color: var(--lime); color: #06131C; }
 
 /* Rest timer */
 .timer {

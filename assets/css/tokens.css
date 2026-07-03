@@ -1,44 +1,51 @@
 /* ============================================================
    MySystemFit — Design Tokens
-   "Tech premium con pulso de energía"
+   Marca: NEGRO carbón · AZUL eléctrico · ROJO energía
+   Nota: se conservan los nombres históricos de las variables
+   (--indigo = azul primario, --lime = cian positivo, --coral =
+   rojo de marca) para no tocar la lógica; solo cambian valores.
    ============================================================ */
 
 :root {
   /* ---- Color · Superficies (dark, default) ---- */
-  --bg-base: #0B0D12;          /* casi negro con tinte azulado */
-  --surface: #13161D;          /* cards / paneles */
-  --surface-2: #181C25;        /* modales / dropdowns (elevada) */
-  --surface-3: #1E2330;        /* hover / activo sutil */
-  --border: #1F2430;           /* borde 1px */
-  --border-strong: #2A3040;
+  --bg-base: #07080C;          /* negro carbón profundo */
+  --surface: #0E1016;          /* cards / paneles */
+  --surface-2: #13161F;        /* modales / dropdowns (elevada) */
+  --surface-3: #1A1E2A;        /* hover / activo sutil */
+  --border: #1C2030;           /* borde 1px */
+  --border-strong: #293045;
 
-  /* ---- Color · Acento ---- */
-  --indigo: #6C5CE7;           /* acento primario */
-  --indigo-hi: #8577F0;        /* hover del primario */
-  --indigo-lo: #5546C9;
-  --indigo-soft: rgba(108, 92, 231, 0.14);
-  --indigo-glow: rgba(108, 92, 231, 0.35);
+  /* ---- Color · Acento primario (AZUL eléctrico) ---- */
+  --indigo: #2E6BFF;
+  --indigo-hi: #5B8BFF;
+  --indigo-lo: #1F4FD0;
+  --indigo-soft: rgba(46, 107, 255, 0.15);
+  --indigo-glow: rgba(46, 107, 255, 0.40);
 
-  --lime: #B4F461;             /* energía / progreso positivo */
-  --lime-hi: #C7F883;
-  --lime-soft: rgba(180, 244, 97, 0.13);
-  --lime-glow: rgba(180, 244, 97, 0.30);
+  /* ---- Color · Positivo / progreso (CIAN de marca) ---- */
+  --lime: #39D0FF;
+  --lime-hi: #6BDDFF;
+  --lime-soft: rgba(57, 208, 255, 0.13);
+  --lime-glow: rgba(57, 208, 255, 0.32);
 
-  --coral: #FF6B6B;            /* alerta / atrasado */
-  --coral-soft: rgba(255, 107, 107, 0.13);
-  --coral-glow: rgba(255, 107, 107, 0.30);
+  /* ---- Color · ROJO energía (CTAs de poder / alerta) ---- */
+  --coral: #FF2E4D;
+  --coral-hi: #FF5C74;
+  --coral-soft: rgba(255, 46, 77, 0.13);
+  --coral-glow: rgba(255, 46, 77, 0.35);
 
   --amber: #FFB84D;            /* pendiente */
   --amber-soft: rgba(255, 184, 77, 0.13);
   --amber-glow: rgba(255, 184, 77, 0.28);
 
   /* ---- Color · Texto ---- */
-  --text-1: #F5F6F8;           /* primario */
-  --text-2: #9AA1AE;           /* secundario */
-  --text-3: #5C6270;           /* terciario / disabled */
+  --text-1: #F4F6FB;
+  --text-2: #97A0B5;
+  --text-3: #5A6378;
 
   /* ---- Tipografía ---- */
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: "Space Grotesk", "Inter", -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", "SFMono-Regular", ui-monospace, monospace;
 
   --fw-regular: 400;
@@ -47,9 +54,9 @@
   --fw-bold: 700;
 
   /* ---- Radios ---- */
-  --r-sm: 8px;                 /* inputs, badges */
-  --r-md: 14px;                /* cards */
-  --r-lg: 20px;                /* modales, paneles grandes */
+  --r-sm: 10px;
+  --r-md: 16px;
+  --r-lg: 22px;
   --r-full: 999px;
 
   /* ---- Espaciado (grid 8px) ---- */
@@ -65,23 +72,29 @@
   --s-16: 64px;
 
   /* ---- Sombras ---- */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 8px 24px -8px rgba(0, 0, 0, 0.6);
-  --shadow-lg: 0 24px 60px -20px rgba(0, 0, 0, 0.75);
-  --glow-indigo: 0 0 40px -10px var(--indigo-glow);
-  --glow-lime: 0 0 40px -10px var(--lime-glow);
-  --glow-coral: 0 0 40px -10px var(--coral-glow);
-  --glow-amber: 0 0 40px -10px var(--amber-glow);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 10px 30px -10px rgba(0, 0, 0, 0.65);
+  --shadow-lg: 0 28px 70px -22px rgba(0, 0, 0, 0.8);
+  --glow-indigo: 0 0 44px -10px var(--indigo-glow);
+  --glow-lime: 0 0 44px -10px var(--lime-glow);
+  --glow-coral: 0 0 44px -10px var(--coral-glow);
+  --glow-amber: 0 0 44px -10px var(--amber-glow);
 
   /* ---- Glass ---- */
-  --glass-bg: rgba(19, 22, 29, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.06);
-  --glass-blur: blur(20px);
+  --glass-bg: rgba(11, 13, 19, 0.66);
+  --glass-border: rgba(255, 255, 255, 0.07);
+  --glass-blur: blur(22px) saturate(1.3);
 
-  /* ---- Gradientes de acento ---- */
-  --gradient-hero: linear-gradient(135deg, var(--indigo-hi), var(--lime));
-  --gradient-mesh: radial-gradient(900px 500px at 12% -8%, rgba(108, 92, 231, 0.10), transparent 60%),
-                   radial-gradient(800px 480px at 100% 4%, rgba(180, 244, 97, 0.05), transparent 55%);
+  /* ---- Gradientes de marca ---- */
+  --gradient-hero: linear-gradient(120deg, var(--coral) 0%, var(--indigo-hi) 60%, var(--lime) 110%);
+  --gradient-brand: linear-gradient(135deg, var(--coral), var(--indigo));
+  --gradient-conic: conic-gradient(from var(--conic-angle, 0deg),
+      var(--indigo) 0%, var(--coral) 30%, var(--indigo-hi) 55%, var(--coral-hi) 80%, var(--indigo) 100%);
+
+  /* ---- Aurora (orbes de fondo) ---- */
+  --aurora-red: rgba(255, 46, 77, 0.16);
+  --aurora-blue: rgba(46, 107, 255, 0.20);
+  --aurora-deep: rgba(23, 46, 120, 0.32);
 
   /* ---- Motion ---- */
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
@@ -95,43 +108,52 @@
   --maxw: 1440px;
 }
 
+/* Ángulo animable del conic-gradient (bordes premium) */
+@property --conic-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
 /* ============ Modo claro (toggle secundario) ============ */
 [data-theme="light"] {
-  --bg-base: #F7F8FA;
+  --bg-base: #F5F6FA;
   --surface: #FFFFFF;
   --surface-2: #FFFFFF;
-  --surface-3: #EEF0F4;
-  --border: #E5E8EE;
-  --border-strong: #D3D8E2;
+  --surface-3: #ECEFF6;
+  --border: #E2E6F0;
+  --border-strong: #CDD4E4;
 
-  --indigo: #5B4BD6;
-  --indigo-hi: #6C5CE7;
-  --indigo-soft: rgba(108, 92, 231, 0.10);
+  --indigo: #1F55E0;
+  --indigo-hi: #2E6BFF;
+  --indigo-soft: rgba(31, 85, 224, 0.10);
 
-  --lime: #7CB518;             /* saturación reducida para legibilidad */
-  --lime-soft: rgba(124, 181, 24, 0.14);
+  --lime: #0899C4;             /* cian oscurecido para legibilidad */
+  --lime-hi: #10ABDA;
+  --lime-soft: rgba(8, 153, 196, 0.12);
 
-  --coral: #E5484D;
-  --coral-soft: rgba(229, 72, 77, 0.10);
+  --coral: #E01A38;
+  --coral-hi: #FF2E4D;
+  --coral-soft: rgba(224, 26, 56, 0.10);
   --amber: #E08600;
   --amber-soft: rgba(224, 134, 0, 0.12);
 
-  --text-1: #14161C;
-  --text-2: #5C6270;
-  --text-3: #9AA1AE;
+  --text-1: #12141B;
+  --text-2: #59627A;
+  --text-3: #98A1B8;
 
-  --glass-bg: rgba(255, 255, 255, 0.72);
-  --glass-border: rgba(0, 0, 0, 0.06);
+  --glass-bg: rgba(255, 255, 255, 0.74);
+  --glass-border: rgba(10, 14, 30, 0.07);
 
-  --shadow-md: 0 8px 24px -10px rgba(20, 22, 28, 0.18);
-  --shadow-lg: 0 24px 60px -20px rgba(20, 22, 28, 0.22);
+  --shadow-md: 0 10px 30px -12px rgba(16, 20, 34, 0.20);
+  --shadow-lg: 0 28px 70px -24px rgba(16, 20, 34, 0.26);
 
-  /* ---- Glows recalibrados para fondo claro ---- */
-  --indigo-glow: rgba(91, 75, 214, 0.22);
-  --lime-glow: rgba(124, 181, 24, 0.22);
-  --coral-glow: rgba(229, 72, 77, 0.20);
+  --indigo-glow: rgba(31, 85, 224, 0.22);
+  --lime-glow: rgba(8, 153, 196, 0.20);
+  --coral-glow: rgba(224, 26, 56, 0.22);
   --amber-glow: rgba(224, 134, 0, 0.20);
 
-  --gradient-mesh: radial-gradient(900px 500px at 12% -8%, rgba(91, 75, 214, 0.07), transparent 60%),
-                   radial-gradient(800px 480px at 100% 4%, rgba(124, 181, 24, 0.05), transparent 55%);
+  --aurora-red: rgba(255, 46, 77, 0.07);
+  --aurora-blue: rgba(46, 107, 255, 0.09);
+  --aurora-deep: rgba(46, 107, 255, 0.05);
 }
