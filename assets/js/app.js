@@ -9,6 +9,7 @@
   const api = window.msfApi;
 
   let PROFILE = null;      // profile del coach logueado
+  let FEATURES = null;     // features del plan del coach (rutinas/comunidad/IA)
   let STUDENTS = [];       // cache local, se refresca tras cada escritura
   let PAYMENTS = [];
   let FOLLOW_UPS = [];
@@ -43,9 +44,22 @@
     rutinas: ["Rutinas", "Constructor de entrenamientos"],
     comunidad: ["Comunidad", "Novedades para tus alumnos"],
     mensajes: ["Mensajes", "Conversaciones activas"],
+    referidos: ["Referidos", "Tu código y tu red de coaches"],
     ajustes: ["Ajustes", "Tu cuenta y preferencias"],
   };
+  /* Vistas que dependen del plan del coach */
+  const VIEW_FEATURE = { rutinas: "routines", comunidad: "community" };
+  function viewLocked(view) {
+    const feat = VIEW_FEATURE[view];
+    return feat && FEATURES && !FEATURES[feat];
+  }
   function goTo(view) {
+    if (viewLocked(view)) {
+      const what = view === "rutinas" ? "El constructor de rutinas personalizadas" : "La comunidad para tus alumnos";
+      $("#upsellText") && ($("#upsellText").textContent = `${what} forma parte del plan Star Plus. Mejora tu plan para desbloquearlo.`);
+      $("#modal-upsell")?.classList.add("is-open");
+      return;
+    }
     $$(".view").forEach((v) => v.classList.remove("is-active"));
     const target = $("#view-" + view);
     if (target) target.classList.add("is-active");
@@ -57,6 +71,7 @@
     if (view === "dashboard") runCountUp();
     if (view === "comunidad") renderCommunity();
     if (view === "mensajes") renderConversations();
+    if (view === "referidos") renderReferrals();
   }
   document.addEventListener("click", (e) => {
     const nav = e.target.closest("[data-nav]");
@@ -66,13 +81,39 @@
   $("#menuToggle")?.addEventListener("click", () => $("#sidebar").classList.toggle("is-open"));
 
   function toggleTheme() {
-    const html = document.documentElement;
-    const light = html.getAttribute("data-theme") === "light";
-    html.setAttribute("data-theme", light ? "dark" : "light");
-    toast(light ? "Modo oscuro activado" : "Modo claro activado", "", "info");
+    const mode = window.msfTheme.toggleMode();
+    toast(mode === "light" ? "Modo claro activado" : "Modo oscuro activado", "", "info");
   }
   $("#themeToggle")?.addEventListener("click", toggleTheme);
   $("#themeToggle2")?.addEventListener("click", toggleTheme);
+
+  /* ---------- Ajustes: color de acento ---------- */
+  function renderAccentSwatches() {
+    const wrap = $("#accentSwatches");
+    if (!wrap) return;
+    const current = window.msfTheme.getAccent().toLowerCase();
+    wrap.innerHTML = window.msfTheme.PRESETS.map((p) =>
+      `<button type="button" class="swatch ${p.hex.toLowerCase() === current ? "is-active" : ""}" data-accent="${p.hex}" title="${p.name}" style="background:${p.hex}"></button>`
+    ).join("");
+    const custom = $("#accentCustom");
+    if (custom) custom.value = window.msfTheme.getAccent();
+  }
+  $("#accentSwatches")?.addEventListener("click", (e) => {
+    const sw = e.target.closest("[data-accent]");
+    if (!sw) return;
+    window.msfTheme.setAccent(sw.dataset.accent);
+    renderAccentSwatches();
+    toast("Color actualizado", "", "ok");
+  });
+  $("#accentCustom")?.addEventListener("input", (e) => {
+    window.msfTheme.setAccent(e.target.value);
+    renderAccentSwatches();
+  });
+  $("#accentReset")?.addEventListener("click", () => {
+    window.msfTheme.reset();
+    renderAccentSwatches();
+    toast("Color restablecido", "", "info");
+  });
 
   /* ---------- Render alumnos ---------- */
   function filteredStudents() {
@@ -110,7 +151,7 @@
           <button class="icon-btn js-open-student" style="width:32px;height:32px" title="Ver ficha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button>
         </div></td>
       </tr>`;
-    }).join("") : "";
+    }).join("");
     if (!list.length && tbody) tbody.innerHTML = `<tr><td colspan="6" class="t3 text-sm" style="padding:20px;text-align:center">Sin alumnos que coincidan con el filtro.</td></tr>`;
 
     if (cards) cards.innerHTML = list.map((s) => {
@@ -192,6 +233,7 @@
   /* ---------- Búsqueda y filtros de alumnos ---------- */
   $(".search input")?.addEventListener("input", (e) => {
     studentFilter.text = e.target.value;
+    if (e.target.value && !$("#view-alumnos").classList.contains("is-active")) goTo("alumnos");
     renderStudents();
   });
   $$(".row.gap-2.wrap.mb-4 .pill").forEach((pill, idx, arr) => {
@@ -234,10 +276,89 @@
       dwPayments.innerHTML = rows.map((p) => `<div class="due-row"><div class="due-row__meta"><div class="due-row__name">${p.concept}</div><div class="due-row__sub">${p.state === "ok" ? "Pagado" : new Date(p.due_date).toLocaleDateString("es-MX")}</div></div><span class="mono">$${p.amount}</span><span class="badge ${badgeClass[p.state]}">${p.state === "ok" ? "Pagado" : stateLabel[p.state]}</span></div>`).join("") || `<p class="t3 text-sm">Sin pagos registrados.</p>`;
     }
 
+    // Seguimientos del alumno (reales)
+    const dwFu = $("#dwFollowUps");
+    if (dwFu) {
+      const fus = FOLLOW_UPS.filter((f) => f.student_id === id);
+      dwFu.innerHTML = fus.map((f) => `
+        <div class="alert-item ${f.is_done ? "is-done" : ""}" data-followup="${f.id}">
+          <span class="check js-check ${f.is_done ? "is-done" : ""}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+          <div><div class="alert-item__txt">${f.title}</div><div class="alert-item__sub">${f.is_done ? "Completado" : new Date(f.due_at).toLocaleDateString("es-MX")}</div></div>
+        </div>`).join("") || `<p class="t3 text-sm">Sin seguimientos para este alumno.</p>`;
+    }
+
+    loadDrawerRoutine(id);
+    loadDrawerPhotos(id);
     drawer.classList.add("is-open");
     overlay.classList.add("is-open");
     document.body.style.overflow = "hidden";
   }
+
+  /* Rutina real del alumno en la pestaña Rutina del drawer */
+  async function loadDrawerRoutine(studentId) {
+    const box = $("#dwRoutine");
+    if (!box) return;
+    $("#dwEditRoutine") && ($("#dwEditRoutine").style.display = FEATURES?.routines ? "" : "none");
+    box.innerHTML = `<p class="t3 text-sm">Cargando…</p>`;
+    try {
+      const routine = await api.getStudentRoutine(studentId);
+      if (!routine || !routine.days?.length) {
+        box.innerHTML = `<p class="t3 text-sm">Sin rutina asignada todavía.</p>`;
+        return;
+      }
+      const dayLabels = { lunes: "Lunes", martes: "Martes", miercoles: "Miércoles", jueves: "Jueves", viernes: "Viernes", sabado: "Sábado", domingo: "Domingo" };
+      box.innerHTML = `<div class="section-title">${routine.name || "Rutina"} · ${routine.phase || ""} · Semana ${routine.week || 1}</div>` +
+        routine.days.map((d) => `<div class="kv mb-2"><span>${dayLabels[d.day_name] || d.day_name}</span><span>${d.label || "Día"} · ${(d.exercises || []).length} ejercicios</span></div>`).join("");
+    } catch (ex) { box.innerHTML = `<p class="t3 text-sm">No se pudo cargar la rutina.</p>`; }
+  }
+
+  /* Fotos de progreso reales del alumno en la pestaña Progreso del drawer */
+  async function loadDrawerPhotos(studentId) {
+    const compare = $('#studentDrawer [data-panel="progreso"] .compare');
+    if (!compare) return;
+    try {
+      const photos = await api.listProgressPhotos(studentId);
+      if (!photos.length) return; // conserva los placeholders si aún no hay fotos
+      const first = photos[0];
+      const last = photos[photos.length - 1];
+      const cell = (p, label) => `<div class="compare__ph"><span>${label} · ${new Date(p.taken_at).toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}</span><img src="${p.url}" style="width:100%;height:100%;object-fit:cover" alt="${label}"></div>`;
+      compare.innerHTML = photos.length === 1 ? cell(first, "Última") : cell(first, "Primera") + cell(last, "Última");
+    } catch (ex) { /* silencioso */ }
+  }
+
+  /* ---------- Editar datos del alumno (desde la ficha) ---------- */
+  let EDIT_STUDENT_ID = null;
+  function setStudentModalMode(edit) {
+    const modal = $("#modal-newStudent");
+    if (!modal) return;
+    modal.querySelector("h3").textContent = edit ? "Editar alumno" : "Nuevo alumno";
+    modal.querySelector("p").textContent = edit
+      ? "Actualiza los datos del alumno. El correo y la contraseña de acceso no se cambian aquí."
+      : "Crea la cuenta del alumno y su membresía. Se sincroniza con Pagos, Mensajes y Rutinas.";
+    $("#nsSubmit").textContent = edit ? "Guardar cambios" : "Crear alumno";
+    // Campos que solo aplican al alta (cuenta y cobro inicial)
+    ["nsEmail", "nsPassword", "nsAmount", "nsPayState"].forEach((id) => {
+      const f = $("#" + id)?.closest(".field");
+      if (f) f.style.display = edit ? "none" : "";
+    });
+  }
+  function openStudentEditor(id) {
+    const s = STUDENTS.find((x) => x.id === id);
+    if (!s) return;
+    EDIT_STUDENT_ID = id;
+    $("#nsName").value = s.full_name || "";
+    $("#nsPhone").value = s.phone || "";
+    $("#nsType").value = s.training_type || "Online";
+    if (s.goal) $("#nsGoal").value = s.goal;
+    $("#nsWeight").value = s.weight_current ?? "";
+    $("#nsWeightGoal").value = s.weight_goal ?? "";
+    $("#nsStart").value = s.member_since || "";
+    $("#nsEnd").value = s.membership_end || "";
+    $("#nsNotes").value = s.private_notes || "";
+    setStudentModalMode(true);
+    $("#modal-newStudent").classList.add("is-open");
+  }
+  $("#btnEditStudent")?.addEventListener("click", () => { if (CURRENT_STUDENT_ID) openStudentEditor(CURRENT_STUDENT_ID); });
   function closeDrawer() {
     drawer.classList.remove("is-open");
     overlay.classList.remove("is-open");
@@ -268,31 +389,155 @@
   /* ---------- Modales ---------- */
   document.addEventListener("click", (e) => {
     const open = e.target.closest("[data-modal]");
-    if (open) { $("#modal-" + open.dataset.modal)?.classList.add("is-open"); }
+    if (open) {
+      const name = open.dataset.modal;
+      const today = new Date().toISOString().slice(0, 10);
+      if (name === "newPayment") {
+        fillStudentSelect($("#npStudent"), { includeEmpty: true, emptyLabel: "Selecciona…" });
+        if (!$("#npDue").value) $("#npDue").value = today;
+      }
+      if (name === "newFollowUp") {
+        fillStudentSelect($("#fuStudent"), { includeEmpty: true, emptyLabel: "Sin alumno" });
+        if (!$("#fuDate").value) $("#fuDate").value = today;
+      }
+      if (name === "newStudent" && open.matches("[data-modal='newStudent']")) {
+        // Apertura desde "Nuevo alumno" → modo alta limpio
+        EDIT_STUDENT_ID = null;
+        $("#formNewStudent").reset();
+        setStudentModalMode(false);
+        $("#nsStart").value = today;
+      }
+      $("#modal-" + name)?.classList.add("is-open");
+    }
     if (e.target.classList.contains("modal-overlay") || e.target.closest(".js-modal-close")) {
       $$(".modal-overlay").forEach((m) => m.classList.remove("is-open"));
     }
   });
 
-  /* ---------- Nuevo alumno (persistido) ---------- */
+  /* ---------- Nuevo alumno (completo + sincronizado) ---------- */
   $("#formNewStudent")?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const name = $("#nsName").value.trim();
     if (!name) return;
+    const email = $("#nsEmail").value.trim();
+    const password = $("#nsPassword").value;
+    if (email && (!password || password.length < 6)) {
+      return errToast({ message: "La contraseña debe tener al menos 6 caracteres." }, "Falta la contraseña");
+    }
+    const btn = $("#nsSubmit");
+    btn.disabled = true;
+    const num = (v) => (v === "" || v == null ? null : Number(v));
+
+    // ----- Modo edición: actualiza la ficha existente (sin auth ni cobro) -----
+    if (EDIT_STUDENT_ID) {
+      try {
+        const updated = await api.updateStudent(EDIT_STUDENT_ID, {
+          full_name: name,
+          phone: $("#nsPhone").value.trim() || null,
+          training_type: $("#nsType").value,
+          goal: $("#nsGoal").value,
+          weight_current: num($("#nsWeight").value),
+          weight_goal: num($("#nsWeightGoal").value),
+          member_since: $("#nsStart").value || null,
+          membership_end: $("#nsEnd").value || null,
+          private_notes: $("#nsNotes").value.trim() || null,
+        });
+        const idx = STUDENTS.findIndex((x) => x.id === EDIT_STUDENT_ID);
+        if (idx > -1) STUDENTS[idx] = { ...STUDENTS[idx], ...updated, initials: api.initials(updated.full_name) };
+        renderStudents();
+        if (CURRENT_STUDENT_ID === EDIT_STUDENT_ID) openDrawer(EDIT_STUDENT_ID);
+        $$(".modal-overlay").forEach((m) => m.classList.remove("is-open"));
+        EDIT_STUDENT_ID = null;
+        toast("Alumno actualizado", name, "ok");
+      } catch (ex) { errToast(ex, "No se pudo actualizar el alumno"); }
+      finally { btn.disabled = false; }
+      return;
+    }
     try {
-      const created = await api.createStudent(PROFILE.id, {
+      const created = await api.createStudentFull(PROFILE.id, {
         full_name: name,
+        email, password,
+        phone: $("#nsPhone").value.trim(),
         training_type: $("#nsType").value,
         goal: $("#nsGoal").value,
-        state: "pend",
+        weight_current: num($("#nsWeight").value),
+        weight_goal: num($("#nsWeightGoal").value),
+        member_since: $("#nsStart").value || null,
+        membership_end: $("#nsEnd").value || null,
+        payment_amount: num($("#nsAmount").value),
+        state: $("#nsPayState").value,
+        private_notes: $("#nsNotes").value.trim(),
       });
-      STUDENTS.push({ ...created, initials: api.initials(created.full_name) });
+      STUDENTS.push(created);
+      STUDENTS.sort((a, b) => a.full_name.localeCompare(b.full_name));
       renderStudents();
+      await refreshPayments();
+      updateKpis();
       $$(".modal-overlay").forEach((m) => m.classList.remove("is-open"));
       e.target.reset();
-      toast("Alumno creado", name, "ok");
-    } catch (ex) { errToast(ex, "No se pudo crear el alumno"); }
+      toast("Alumno creado", email ? `${name} ya puede iniciar sesión` : name, "ok");
+      applyPlanGating();
+    } catch (ex) {
+      if (ex._planLimit) toast("Límite del plan alcanzado", ex.message, "err");
+      else if (ex._authOnly) errToast(ex, "No se pudo crear la cuenta de acceso (¿correo ya usado?)");
+      else errToast(ex, "No se pudo crear el alumno");
+    } finally { btn.disabled = false; }
   });
+
+  /* ---------- Registrar pago (persistido) ---------- */
+  $("#formNewPayment")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const studentId = $("#npStudent").value;
+    const amount = Number($("#npAmount").value);
+    if (!studentId || !amount) return;
+    try {
+      await api.createPayment(PROFILE.id, {
+        student_id: studentId,
+        concept: $("#npConcept").value.trim() || "Membresía",
+        amount,
+        due_date: $("#npDue").value,
+        state: $("#npState").value,
+        paid_at: $("#npState").value === "ok" ? new Date().toISOString() : null,
+      });
+      await refreshPayments();
+      renderStudents();
+      updateKpis();
+      $$(".modal-overlay").forEach((m) => m.classList.remove("is-open"));
+      e.target.reset();
+      $("#npConcept").value = "Membresía";
+      toast("Pago registrado", "", "ok");
+    } catch (ex) { errToast(ex, "No se pudo registrar el pago"); }
+  });
+
+  /* ---------- Nuevo objetivo / seguimiento (persistido) ---------- */
+  $("#formNewFollowUp")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const title = $("#fuTitle").value.trim();
+    if (!title) return;
+    const studentId = $("#fuStudent").value || null;
+    try {
+      await api.createFollowUp(PROFILE.id, studentId, {
+        title,
+        due_at: ($("#fuDate").value ? new Date($("#fuDate").value).toISOString() : new Date().toISOString()),
+      });
+      FOLLOW_UPS = await api.listFollowUps(PROFILE.id);
+      renderFollowUps();
+      renderNotifications();
+      $$(".modal-overlay").forEach((m) => m.classList.remove("is-open"));
+      e.target.reset();
+      toast("Objetivo creado", "", "ok");
+    } catch (ex) { errToast(ex, "No se pudo crear el objetivo"); }
+  });
+
+  /* Rellena los <select> de alumnos al abrir cada modal / vista */
+  function fillStudentSelect(sel, { includeEmpty = false, emptyLabel = "" } = {}) {
+    if (!sel) return;
+    const opts = (includeEmpty ? `<option value="">${emptyLabel}</option>` : "") +
+      STUDENTS.map((s) => `<option value="${s.id}">${s.full_name}</option>`).join("");
+    const prev = sel.value;
+    sel.innerHTML = opts;
+    if (prev) sel.value = prev;
+  }
 
   /* ---------- Checkboxes de seguimientos (persistidos) ---------- */
   document.addEventListener("click", async (e) => {
@@ -308,6 +553,7 @@
       await api.toggleFollowUp(id, nowDone);
       const f = FOLLOW_UPS.find((x) => x.id === id);
       if (f) f.is_done = nowDone;
+      renderNotifications();
     } catch (ex) { errToast(ex, "No se pudo actualizar el seguimiento"); }
   });
 
@@ -429,7 +675,7 @@
         const exercises = existing?.exercises || [];
         return `<div class="day-col" data-day="${d}">
           <div class="day-col__head"><span class="day-col__title">${dayLabels[d]}</span><span class="day-col__count">${existing?.label || "Día"} · ${exercises.length}</span></div>
-          ${exercises.map((ex) => `<div class="ex-card" draggable="true"><div class="ex-card__name">${ex.name}</div><div class="ex-card__grid"><div class="ex-input"><label>Series</label><input value="${ex.sets ?? ""}" data-field="sets"></div><div class="ex-input"><label>Reps</label><input value="${ex.reps ?? ""}" data-field="reps"></div><div class="ex-input"><label>Kg</label><input value="${ex.kg ?? ""}" data-field="kg"></div><div class="ex-input"><label>Desc</label><input value="${ex.rest_seconds ?? ""}" data-field="rest_seconds"></div></div></div>`).join("")}
+          ${exercises.map((ex) => exerciseCardHTML(ex)).join("")}
           <div class="day-add">+ Añadir ejercicio</div>
         </div>`;
       }).join("");
@@ -456,6 +702,7 @@
           reps: Number($('[data-field="reps"]', card)?.value) || null,
           kg: Number($('[data-field="kg"]', card)?.value) || null,
           rest_seconds: Number($('[data-field="rest_seconds"]', card)?.value) || null,
+          muscle_group: $('[data-field="muscle_group"]', card)?.value || null,
         }));
         await api.saveRoutineDay(routineId, day, label, exercises, i);
       }
@@ -463,11 +710,50 @@
     } catch (ex) { errToast(ex, "No se pudo guardar la rutina"); }
   });
 
+  let dragEl = null;
+  let placeholder = null;
+  function attachCardDrag(card) {
+    const board = $("#builderBoard");
+    card.addEventListener("dragstart", (e) => {
+      dragEl = card;
+      card.classList.add("is-dragging");
+      requestAnimationFrame(() => card.classList.add("is-lifted"));
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", "");
+    });
+    card.addEventListener("dragend", () => {
+      card.classList.remove("is-dragging", "is-lifted");
+      $$(".day-col", board).forEach((d) => d.classList.remove("is-dragover"));
+      placeholder?.remove(); placeholder = null;
+      dragEl = null;
+    });
+  }
+  const MUSCLE_GROUPS = ["Pecho", "Pecho superior", "Pecho inferior", "Espalda", "Dorsal", "Espalda baja", "Hombro", "Deltoide frontal", "Deltoide lateral", "Deltoide posterior", "Bíceps", "Tríceps", "Antebrazo", "Cuádriceps", "Femoral", "Glúteo", "Pantorrilla", "Core", "Abdomen", "Oblicuos", "Full body", "Cardio"];
+  function muscleSelectHTML(current) {
+    return `<select class="select" data-field="muscle_group" style="height:30px;font-size:12px;padding:0 8px;margin-top:6px;width:100%">
+      <option value="">Músculo…</option>
+      ${MUSCLE_GROUPS.map((m) => `<option${current === m ? " selected" : ""}>${m}</option>`).join("")}
+    </select>`;
+  }
+  function exerciseCardHTML(ex = {}) {
+    return `<div class="ex-card" draggable="true"><div class="ex-card__name" contenteditable="true">${ex.name || "Nuevo ejercicio"}</div><div class="ex-card__grid"><div class="ex-input"><label>Series</label><input value="${ex.sets ?? ""}" data-field="sets"></div><div class="ex-input"><label>Reps</label><input value="${ex.reps ?? ""}" data-field="reps"></div><div class="ex-input"><label>Kg</label><input value="${ex.kg ?? ""}" data-field="kg"></div><div class="ex-input"><label>Desc</label><input value="${ex.rest_seconds ?? ""}" data-field="rest_seconds"></div></div>${muscleSelectHTML(ex.muscle_group)}</div>`;
+  }
+  function addExercise(col, ex = {}) {
+    const tmp = document.createElement("div");
+    tmp.innerHTML = exerciseCardHTML(ex);
+    const card = tmp.firstElementChild;
+    const addBtn = $(".day-add", col);
+    if (addBtn) col.insertBefore(card, addBtn); else col.appendChild(card);
+    attachCardDrag(card);
+    const countEl = $(".day-col__count", col);
+    if (countEl && countEl.textContent.includes("·")) {
+      const label = countEl.textContent.split("·")[0].trim();
+      countEl.textContent = `${label} · ${$$(".ex-card", col).length}`;
+    }
+  }
   function initBuilderDnD() {
     const board = $("#builderBoard");
     if (!board) return;
-    let dragEl = null;
-    let placeholder = null;
     function removePlaceholder() { placeholder?.remove(); placeholder = null; }
     function getAfterElement(col, y) {
       const cards = $$(".ex-card:not(.is-dragging)", col);
@@ -486,21 +772,7 @@
         countEl.textContent = `${label} · ${n}`;
       });
     }
-    $$(".ex-card", board).forEach((card) => {
-      card.addEventListener("dragstart", (e) => {
-        dragEl = card;
-        card.classList.add("is-dragging");
-        requestAnimationFrame(() => card.classList.add("is-lifted"));
-        e.dataTransfer.effectAllowed = "move";
-        e.dataTransfer.setData("text/plain", "");
-      });
-      card.addEventListener("dragend", () => {
-        card.classList.remove("is-dragging", "is-lifted");
-        $$(".day-col", board).forEach((d) => d.classList.remove("is-dragover"));
-        removePlaceholder();
-        dragEl = null;
-      });
-    });
+    $$(".ex-card", board).forEach((card) => attachCardDrag(card));
     $$(".day-col", board).forEach((col) => {
       col.addEventListener("dragover", (e) => {
         e.preventDefault();
@@ -523,7 +795,43 @@
     });
   }
   document.addEventListener("click", (e) => {
-    if (e.target.closest("[data-nav='rutinas']") && CURRENT_STUDENT_ID) loadRoutineBuilder(CURRENT_STUDENT_ID);
+    if (e.target.closest("[data-nav='rutinas']") && CURRENT_STUDENT_ID) {
+      const sel = $("#routineStudentSelect");
+      if (sel) sel.value = CURRENT_STUDENT_ID;
+      loadRoutineBuilder(CURRENT_STUDENT_ID);
+    }
+  });
+
+  /* Selector de alumno directamente en la vista Rutinas (crear rutina manual) */
+  function fillRoutineSelect() {
+    const sel = $("#routineStudentSelect");
+    if (!sel) return;
+    const prev = sel.value;
+    sel.innerHTML = `<option value="">Selecciona un alumno…</option>` +
+      STUDENTS.map((s) => `<option value="${s.id}">${s.full_name}</option>`).join("");
+    if (prev) sel.value = prev;
+  }
+  $("#routineStudentSelect")?.addEventListener("change", (e) => {
+    const id = e.target.value;
+    if (!id) return;
+    CURRENT_STUDENT_ID = id;
+    loadRoutineBuilder(id);
+  });
+
+  /* "+ Añadir ejercicio" y biblioteca (click para agregar al primer día) */
+  $("#builderBoard")?.addEventListener("click", (e) => {
+    const add = e.target.closest(".day-add");
+    if (!add) return;
+    const col = add.closest(".day-col");
+    if (col) addExercise(col);
+  });
+  document.querySelector(".ex-library")?.addEventListener("click", (e) => {
+    const item = e.target.closest(".ex-lib-item");
+    if (!item) return;
+    if (!$("#builderBoard")?.dataset.routineId) return toast("Elige un alumno primero", "", "info");
+    const name = item.querySelector(".fw-600")?.textContent.trim() || "Ejercicio";
+    const firstCol = $("#builderBoard .day-col");
+    if (firstCol) { addExercise(firstCol, { name }); toast("Ejercicio añadido", name, "ok"); }
   });
 
   /* ---------- Comunidad (persistido) ---------- */
@@ -606,6 +914,66 @@
     } catch (ex) { errToast(ex, "No se pudo enviar el mensaje"); }
   });
 
+  /* ---------- Notificaciones (derivadas de datos reales) ---------- */
+  const NOTIF_READ_KEY = "msf_notif_read";
+  function readNotifIds() { try { return new Set(JSON.parse(localStorage.getItem(NOTIF_READ_KEY) || "[]")); } catch { return new Set(); } }
+  function buildNotifications() {
+    const items = [];
+    PAYMENTS.filter((p) => p.state !== "ok").forEach((p) => {
+      const days = Math.ceil((new Date(p.due_date) - new Date()) / 86400000);
+      if (days > 5) return;
+      const late = days < 0;
+      items.push({
+        id: "pay-" + p.id,
+        tone: late ? "coral" : "amber",
+        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>',
+        text: late ? `Pago atrasado · ${p.student_name}` : `Pago por vencer · ${p.student_name}`,
+        sub: `$${p.amount} · ${late ? `atrasado ${-days}d` : days === 0 ? "vence hoy" : `en ${days} días`}`,
+        nav: "pagos",
+      });
+    });
+    FOLLOW_UPS.filter((f) => !f.is_done).forEach((f) => {
+      items.push({
+        id: "fu-" + f.id,
+        tone: "indigo",
+        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
+        text: f.title,
+        sub: f.subtitle || (f.students ? f.students.full_name : "Seguimiento"),
+        nav: "dashboard",
+      });
+    });
+    return items;
+  }
+  function renderNotifications() {
+    const list = $("#notifList");
+    const dot = $("#notifDot");
+    if (!list) return;
+    const items = buildNotifications();
+    const read = readNotifIds();
+    const unread = items.filter((i) => !read.has(i.id)).length;
+    if (dot) { dot.textContent = unread; dot.classList.toggle("hidden", unread === 0); }
+    list.innerHTML = items.map((i) => `
+      <button class="notif-item ${read.has(i.id) ? "" : "is-unread"}" data-notif-nav="${i.nav}">
+        <span class="notif-item__ico notif-item__ico--${i.tone}">${i.icon}</span>
+        <span class="notif-item__body"><span class="notif-item__txt">${i.text}</span><span class="notif-item__sub">${i.sub}</span></span>
+      </button>`).join("") || `<p class="t3 text-sm" style="padding:16px;text-align:center">Todo al día 🎉</p>`;
+  }
+  $("#notifBtn")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    $("#notifPanel")?.classList.toggle("is-open");
+    renderNotifications();
+  });
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".notif-wrap")) $("#notifPanel")?.classList.remove("is-open");
+    const n = e.target.closest("[data-notif-nav]");
+    if (n) { goTo(n.dataset.notifNav); $("#notifPanel")?.classList.remove("is-open"); }
+  });
+  $("#notifMarkAll")?.addEventListener("click", () => {
+    const ids = buildNotifications().map((i) => i.id);
+    localStorage.setItem(NOTIF_READ_KEY, JSON.stringify(ids));
+    renderNotifications();
+  });
+
   /* ---------- Count-up de KPIs ---------- */
   function runCountUp() {
     $$("#view-dashboard .kpi__value[data-count]").forEach((el) => {
@@ -624,18 +992,163 @@
     });
   }
   function updateKpis() {
+    const fin = api.financeKpis(PAYMENTS);
     const active = STUDENTS.filter((s) => s.state === "ok").length;
-    const pendPayments = PAYMENTS.filter((p) => p.state !== "ok").length;
-    const revenue = PAYMENTS.filter((p) => p.state === "ok").reduce((sum, p) => sum + Number(p.amount), 0);
-    const kEl = (n) => $(`#view-dashboard .kpi__value[data-count]`);
+    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const newThisMonth = STUDENTS.filter((s) => s.created_at && new Date(s.created_at) >= monthStart).length;
     const kpis = $$("#view-dashboard .kpi__value[data-count]");
-    if (kpis[0]) kpis[0].dataset.count = revenue;
+    if (kpis[0]) kpis[0].dataset.count = fin.collectedMonth;
     if (kpis[1]) kpis[1].dataset.count = active;
-    if (kpis[3]) kpis[3].dataset.count = pendPayments;
+    if (kpis[2]) kpis[2].dataset.count = newThisMonth;
+    if (kpis[3]) kpis[3].dataset.count = fin.pendingCount;
+    renderFinance(fin);
+  }
+
+  /* ---------- Finanzas reales (vista Pagos + gráfico del dashboard) ---------- */
+  const money = (n) => "$" + Number(n || 0).toLocaleString("es-MX");
+  function renderFinance(fin) {
+    fin = fin || api.financeKpis(PAYMENTS);
+    $("#finCollected") && ($("#finCollected").textContent = money(fin.collectedMonth));
+    $("#finPending") && ($("#finPending").textContent = money(fin.pendingAmount));
+    $("#finOverdue") && ($("#finOverdue").textContent = money(fin.overdueAmount));
+    $("#finTicket") && ($("#finTicket").textContent = money(fin.avgTicket));
+
+    // Gráfico de ingresos del dashboard con los cobros reales de 12 meses
+    const wrap = $("#revenueChartWrap");
+    if (!wrap) return;
+    const values = fin.monthly.map((m) => m.total);
+    wrap.dataset.chartValues = values.join(",");
+    const totalEl = wrap.closest(".chart-card")?.querySelector(".chart-total");
+    if (totalEl) totalEl.textContent = money(fin.collectedMonth);
+    const max = Math.max(...values, 1);
+    const pts = values.map((v, i) => [Math.round(i * (640 / (values.length - 1))), Math.round(200 - (v / max) * 160)]);
+    const line = "M" + pts.map((p) => p.join(",")).join(" L");
+    const svg = wrap.querySelector(".chart-svg");
+    if (svg) {
+      const paths = svg.querySelectorAll("path");
+      if (paths[0]) paths[0].setAttribute("d", line + " L640,240 L0,240 Z");
+      if (paths[1]) paths[1].setAttribute("d", line);
+      const dot = svg.querySelector("circle.chart-dot-indigo");
+      if (dot && pts.length) { dot.setAttribute("cx", pts[pts.length - 1][0]); dot.setAttribute("cy", pts[pts.length - 1][1]); }
+    }
+    const legend = wrap.closest(".chart-card")?.querySelector(".chart-legend span:first-child");
+    if (legend) legend.innerHTML = `<i style="background:var(--indigo)"></i>Ingresos ${new Date().getFullYear()}`;
+    const updated = wrap.closest(".chart-card")?.querySelector(".chart-legend .t3");
+    if (updated) updated.textContent = "Cobros reales · últimos 12 meses";
+  }
+
+  /* ---------- Gating por plan ---------- */
+  const lockSvg = '<svg viewBox="0 0 24 24" width="13" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:auto;opacity:.6"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+  function applyPlanGating() {
+    const plan = PROFILE.plan || "Star";
+    FEATURES = api.planFeatures(plan);
+    // Badge del plan en el sidebar
+    const planBadge = $(".coach-card__plan .badge");
+    if (planBadge) planBadge.textContent = "★ " + plan;
+    // Candados en la navegación
+    Object.entries(VIEW_FEATURE).forEach(([view, feat]) => {
+      const item = $(`.nav__item[data-nav="${view}"]`);
+      if (item && !FEATURES[feat] && !item.querySelector("svg[data-lock]")) {
+        const tmp = document.createElement("span");
+        tmp.innerHTML = lockSvg;
+        tmp.firstChild.dataset.lock = "1";
+        item.appendChild(tmp.firstChild);
+      }
+    });
+    // Tarjeta del plan en Ajustes: nombre, límite y uso
+    const limit = api.planLimit(plan);
+    $("#planName") && ($("#planName").textContent = plan);
+    $("#planDesc") && ($("#planDesc").textContent = FEATURES.routines
+      ? `Hasta ${limit} alumnos · Rutinas personalizadas · Comunidad`
+      : `Hasta ${limit} alumnos · Gestión de alumnos y pagos`);
+    $("#planUsage") && ($("#planUsage").textContent = `${STUDENTS.length}/${limit}`);
+    $("#planUsageBar") && ($("#planUsageBar").style.width = Math.min(100, (STUDENTS.length / limit) * 100) + "%");
+  }
+
+  /* ---------- Referidos ---------- */
+  async function renderReferrals() {
+    try {
+      const info = await api.getReferralInfo(PROFILE.id);
+      $("#refCodeDisplay") && ($("#refCodeDisplay").textContent = info.code || "—");
+      $("#refCount") && ($("#refCount").textContent = info.referrals.length);
+      const list = $("#refList");
+      if (list && info.referrals.length) {
+        list.innerHTML = info.referrals.map((r) => `
+          <div class="due-row">
+            <div class="avatar avatar--sm">${api.initials(r.referred?.full_name)}</div>
+            <div class="due-row__meta"><div class="due-row__name">${r.referred?.full_name || "Coach"}</div><div class="due-row__sub">${r.referred?.email || ""}</div></div>
+            <span class="t3 text-sm">${new Date(r.created_at).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}</span>
+          </div>`).join("");
+      }
+    } catch (ex) { errToast(ex, "No se pudieron cargar los referidos"); }
+  }
+  $("#btnCopyRefCode")?.addEventListener("click", async () => {
+    const code = $("#refCodeDisplay")?.textContent.trim();
+    if (!code || code === "—") return;
+    try { await navigator.clipboard.writeText(code); toast("Código copiado", code, "ok"); }
+    catch { toast(code, "Cópialo manualmente", "info"); }
+  });
+
+  /* ---------- Asistencia de hoy (alumnos presenciales) ---------- */
+  async function renderAttendanceToday() {
+    const wrap = $("#attendanceToday");
+    if (!wrap) return;
+    const today = new Date().toISOString().slice(0, 10);
+    try {
+      const rows = await api.listCoachAttendance(PROFILE.id, today);
+      const presencial = STUDENTS.filter((s) => s.training_type === "Presencial");
+      if (!presencial.length) {
+        wrap.innerHTML = `<p class="t3 text-sm">No tienes alumnos presenciales.</p>`;
+        $("#attendanceSummary") && ($("#attendanceSummary").textContent = "");
+        return;
+      }
+      const byStudent = {};
+      rows.forEach((r) => { byStudent[r.student_id] = r; });
+      const yes = rows.filter((r) => r.attending).length;
+      const no = rows.filter((r) => !r.attending).length;
+      $("#attendanceSummary") && ($("#attendanceSummary").textContent = `${yes} van · ${no} no van · ${presencial.length - rows.length} sin responder`);
+      wrap.innerHTML = presencial.map((s) => {
+        const r = byStudent[s.id];
+        const badge = !r
+          ? '<span class="badge badge--pend">Sin responder</span>'
+          : r.attending
+            ? '<span class="badge badge--ok">Sí va</span>'
+            : '<span class="badge badge--late">No va</span>';
+        return `<div class="due-row">
+          <div class="avatar avatar--sm">${s.initials}</div>
+          <div class="due-row__meta"><div class="due-row__name">${s.full_name}</div><div class="due-row__sub">${r && !r.attending && r.reason ? "Motivo: " + r.reason : (r?.reason || "")}</div></div>
+          ${badge}
+        </div>`;
+      }).join("");
+    } catch (ex) { wrap.innerHTML = `<p class="t3 text-sm">No se pudo cargar la asistencia.</p>`; }
   }
 
   /* ---------- Refrescos ---------- */
-  async function refreshPayments() { PAYMENTS = await api.listPayments(PROFILE.id); renderPayments(); renderDueList(); }
+  async function refreshPayments() { PAYMENTS = await api.listPayments(PROFILE.id); renderPayments(); renderDueList(); renderNotifications(); }
+
+  /* ---------- Realtime (mensajes, pagos, seguimientos) ---------- */
+  function subscribeRealtime() {
+    if (!window.msfSupabase || !PROFILE) return;
+    window.msfSupabase
+      .channel("coach-" + PROFILE.id)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `coach_id=eq.${PROFILE.id}` }, (payload) => {
+        const m = payload.new;
+        if (m.sender_id === PROFILE.id) return; // fue enviado por el propio coach
+        if ($("#view-mensajes").classList.contains("is-active") && activeConversationId === m.student_id) {
+          selectConversation(m.student_id);
+        } else {
+          const s = STUDENTS.find((x) => x.id === m.student_id);
+          toast("Nuevo mensaje", s ? s.full_name : "", "info");
+        }
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "payments", filter: `coach_id=eq.${PROFILE.id}` }, () => {
+        refreshPayments(); renderStudents(); updateKpis();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "follow_ups", filter: `coach_id=eq.${PROFILE.id}` }, async () => {
+        FOLLOW_UPS = await api.listFollowUps(PROFILE.id); renderFollowUps(); renderNotifications();
+      })
+      .subscribe();
+  }
 
   /* ---------- Init ---------- */
   async function init() {
@@ -658,6 +1171,7 @@
       ]);
     } catch (ex) { errToast(ex, "No se pudieron cargar los datos"); }
 
+    applyPlanGating();
     renderStudents();
     renderPayments();
     renderDueList();
@@ -665,6 +1179,11 @@
     updateKpis();
     runCountUp();
     initChartTooltips();
+    renderNotifications();
+    fillRoutineSelect();
+    renderAccentSwatches();
+    renderAttendanceToday();
+    subscribeRealtime();
   }
 
   document.addEventListener("DOMContentLoaded", init);

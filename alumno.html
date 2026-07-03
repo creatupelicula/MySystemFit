@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="assets/css/tokens.css" />
 <link rel="stylesheet" href="assets/css/app.css" />
 <link rel="stylesheet" href="assets/css/alumno.css" />
+<script src="assets/js/theme.js"></script>
 </head>
 <body>
 <div class="app-shell">
@@ -62,6 +63,20 @@
           <span class="badge badge--pend">Vence en 3 días</span>
         </div>
         <button class="btn btn--lime btn--block mt-4">Renovar ahora · $85</button>
+      </div>
+
+      <!-- Asistencia de hoy (solo presencial) -->
+      <div class="card mt-4 hidden" id="attendanceCard">
+        <div class="section-title" style="margin-bottom:4px">¿Vas a entrenar hoy?</div>
+        <p class="t3 text-sm mb-4" id="attendanceStatus">Confírmale a tu coach si asistes hoy.</p>
+        <div class="row gap-3" id="attendanceBtns">
+          <button class="btn btn--lime" id="btnAttendYes" style="flex:1">Sí voy 💪</button>
+          <button class="btn btn--ghost" id="btnAttendNo" style="flex:1">No puedo</button>
+        </div>
+        <div class="hidden mt-4" id="attendanceReasonBox">
+          <div class="field" style="margin-bottom:10px"><label>¿Cuál es el motivo?</label><textarea class="input" id="attendanceReason" style="min-height:70px;resize:vertical" placeholder="Ej. trabajo, enfermedad, viaje…"></textarea></div>
+          <button class="btn btn--primary btn--block" id="btnAttendSendNo">Enviar a mi coach</button>
+        </div>
       </div>
 
       <!-- CTA rutina de hoy -->

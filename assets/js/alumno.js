@@ -30,6 +30,7 @@
     if (view === "home") animateRing();
     if (view === "comunidad") renderCommunity();
     if (view === "chat") loadChat();
+    if (view === "progreso") renderPhotoTimeline();
   }
   document.addEventListener("click", (e) => {
     const b = e.target.closest("[data-anav]");
@@ -124,19 +125,42 @@
   document.addEventListener("click", (e) => { if (e.target.closest(".js-rest")) startRest(); });
   $("#timerSkip")?.addEventListener("click", () => { clearInterval(timerInt); $("#restTimer").classList.remove("show"); });
 
-  /* Dropzone fotos (preview local; el guardado real de imágenes requiere Supabase Storage) */
+  /* Dropzone fotos → subida real a Supabase Storage */
   const dz = $("#dropzone"), fi = $("#fileInput"), prev = $("#dropPreview");
+  let pendingFile = null;
   dz?.addEventListener("click", () => fi.click());
   ["dragover", "dragenter"].forEach((ev) => dz?.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add("drag"); }));
   ["dragleave", "drop"].forEach((ev) => dz?.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.remove("drag"); }));
   function showPreview(file) {
     if (!file) return;
+    pendingFile = file;
     const url = URL.createObjectURL(file);
-    prev.innerHTML = `<div class="card" style="display:flex;gap:12px;align-items:center"><img src="${url}" style="width:60px;height:80px;object-fit:cover;border-radius:8px"><div><div class="fw-600">Foto lista</div><div class="t3 text-sm">${file.name}</div></div><button class="btn btn--lime btn--sm" style="margin-left:auto">Subir</button></div>`;
-    toast("Foto seleccionada", "info");
+    prev.innerHTML = `<div class="card" style="display:flex;gap:12px;align-items:center"><img src="${url}" style="width:60px;height:80px;object-fit:cover;border-radius:8px"><div><div class="fw-600">Foto lista</div><div class="t3 text-sm">${file.name}</div></div><button class="btn btn--lime btn--sm" id="uploadPhotoBtn" style="margin-left:auto">Subir</button></div>`;
   }
   dz?.addEventListener("drop", (e) => showPreview(e.dataTransfer.files[0]));
   fi?.addEventListener("change", (e) => showPreview(e.target.files[0]));
+  document.addEventListener("click", async (e) => {
+    if (!e.target.closest("#uploadPhotoBtn") || !pendingFile || !STUDENT) return;
+    const btn = e.target.closest("#uploadPhotoBtn");
+    btn.disabled = true; btn.textContent = "Subiendo…";
+    try {
+      await api.uploadProgressPhoto(STUDENT.id, pendingFile);
+      pendingFile = null;
+      prev.innerHTML = "";
+      await renderPhotoTimeline();
+      toast("Foto subida 📸", "ok");
+    } catch (ex) { btn.disabled = false; btn.textContent = "Subir"; errToast(ex, "No se pudo subir la foto"); }
+  });
+
+  async function renderPhotoTimeline() {
+    const grid = $(".photo-grid");
+    if (!grid || !STUDENT) return;
+    try {
+      const photos = await api.listProgressPhotos(STUDENT.id);
+      if (!photos.length) return; // deja los placeholders de ejemplo
+      grid.innerHTML = photos.map((p, i) => `<div class="photo-cell photo-cell--real"><span>${new Date(p.taken_at).toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}</span><img src="${p.url}" alt="Progreso ${i + 1}"></div>`).join("");
+    } catch (ex) { /* silencioso */ }
+  }
 
   /* Tooltip interactivo en gráfico de peso */
   function attachChartTooltip(wrap, values, suffix) {
@@ -168,7 +192,57 @@
     const nameEl = $(".a-top__name");
     if (nameEl) nameEl.textContent = (PROFILE.full_name.split(" ")[0] || PROFILE.full_name) + " 👋";
     $(".avatar.avatar--ring") && ($(".avatar.avatar--ring").textContent = api.initials(PROFILE.full_name));
+
+    // Membresía real (sincronizada con lo que definió el coach)
+    const memBadge = $(".member-card .badge");
+    if (memBadge) {
+      if (STUDENT.membership_end) {
+        const days = Math.ceil((new Date(STUDENT.membership_end) - new Date()) / 86400000);
+        if (days < 0) { memBadge.className = "badge badge--late"; memBadge.textContent = `Vencida hace ${-days}d`; }
+        else if (days <= 5) { memBadge.className = "badge badge--pend"; memBadge.textContent = days === 0 ? "Vence hoy" : `Vence en ${days} días`; }
+        else { memBadge.className = "badge badge--ok"; memBadge.textContent = `Activa · ${days} días`; }
+      } else { memBadge.className = "badge badge--ok"; memBadge.textContent = "Activa"; }
+    }
+    const memType = $(".member-card .t3");
+    if (memType) memType.textContent = `Plan ${STUDENT.training_type === "Presencial" ? "presencial" : "online"}`;
   }
+
+  /* ---------- Asistencia diaria (solo alumnos presenciales) ---------- */
+  const todayStr = () => new Date().toISOString().slice(0, 10);
+  async function loadAttendance() {
+    const card = $("#attendanceCard");
+    if (!card || !STUDENT || STUDENT.training_type !== "Presencial") return;
+    card.classList.remove("hidden");
+    try {
+      const rows = await api.listAttendance(STUDENT.id, todayStr(), todayStr());
+      if (rows.length) paintAttendanceDone(rows[0]);
+    } catch (ex) { /* si falla, deja los botones activos */ }
+  }
+  function paintAttendanceDone(row) {
+    $("#attendanceBtns")?.classList.add("hidden");
+    $("#attendanceReasonBox")?.classList.add("hidden");
+    const st = $("#attendanceStatus");
+    if (st) {
+      st.innerHTML = row.attending
+        ? `<span class="badge badge--ok">Confirmado · Sí vas hoy 💪</span>`
+        : `<span class="badge badge--late">Hoy no vas</span> <span class="t3">${row.reason ? "· " + row.reason : ""}</span>`;
+    }
+  }
+  async function saveAttendance(attending, reason) {
+    try {
+      const row = await api.setAttendance(STUDENT.id, todayStr(), attending, reason);
+      paintAttendanceDone(row);
+      toast(attending ? "¡Tu coach ya sabe que vas! 🔥" : "Avisamos a tu coach", "ok");
+    } catch (ex) { errToast(ex, "No se pudo guardar tu respuesta"); }
+  }
+  $("#btnAttendYes")?.addEventListener("click", () => saveAttendance(true, null));
+  $("#btnAttendNo")?.addEventListener("click", () => {
+    $("#attendanceReasonBox")?.classList.remove("hidden");
+  });
+  $("#btnAttendSendNo")?.addEventListener("click", () => {
+    const reason = $("#attendanceReason")?.value.trim();
+    saveAttendance(false, reason || null);
+  });
 
   /* ---------- Rutina real ---------- */
   async function loadRoutine() {
@@ -182,12 +256,15 @@
       if (!routine || !routine.days.length) return;
       const today = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"][new Date().getDay()];
       const day = routine.days.find((d) => d.day_name === today) || routine.days[0];
+      // CTA del home sincronizado con la rutina real del día
+      const cta = $('#a-home [data-anav="rutina"] .t3');
+      if (cta) cta.textContent = `${day.label || "Entreno"} · ${(day.exercises || []).length} ejercicios`;
       const anchor = $("#finishSession");
       (day.exercises || []).forEach((ex) => {
         const row = document.createElement("div");
         row.className = "ex-row";
         row.dataset.ex = "";
-        row.innerHTML = `<div class="ex-check" data-check><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div><div class="ex-row__body"><div class="ex-row__name">${ex.name}</div><div class="ex-row__meta">${ex.sets ?? "-"} × ${ex.reps ?? "-"} · ${ex.kg ?? "-"} kg · desc ${ex.rest_seconds ?? "-"}s</div></div><button class="btn btn--ghost btn--sm js-rest">Descanso</button>`;
+        row.innerHTML = `<div class="ex-check" data-check><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div><div class="ex-row__body"><div class="ex-row__name">${ex.name}${ex.muscle_group ? ` <span class="badge badge--plan" style="font-size:10px;height:18px;padding:0 8px">${ex.muscle_group}</span>` : ""}</div><div class="ex-row__meta">${ex.sets ?? "-"} × ${ex.reps ?? "-"} · ${ex.kg ?? "-"} kg · desc ${ex.rest_seconds ?? "-"}s</div></div><button class="btn btn--ghost btn--sm js-rest">Descanso</button>`;
         anchor?.parentElement.insertBefore(row, anchor);
       });
       updateSession();
@@ -267,6 +344,20 @@
     } catch (ex) { errToast(ex, "No se pudo enviar el mensaje"); }
   });
 
+  /* Realtime: nuevos mensajes del coach llegan sin recargar */
+  function subscribeRealtime() {
+    if (!STUDENT || !window.msfSupabase) return;
+    window.msfSupabase
+      .channel("alumno-msgs-" + STUDENT.id)
+      .on("postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages", filter: `student_id=eq.${STUDENT.id}` },
+        (payload) => {
+          if ($("#a-chat")?.classList.contains("is-active")) loadChat();
+          else if (payload.new.sender_id !== PROFILE.id) toast("Nuevo mensaje de tu coach 💬", "info");
+        })
+      .subscribe();
+  }
+
   /* ---------- Init ---------- */
   async function init() {
     const auth = await window.msfAuth.requireRole("alumno");
@@ -285,8 +376,11 @@
 
     paintHome();
     animateRing();
+    loadAttendance();
     loadRoutine();
     loadWeightHistory();
+    renderPhotoTimeline();
+    subscribeRealtime();
   }
 
   document.addEventListener("DOMContentLoaded", init);

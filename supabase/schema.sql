@@ -34,6 +34,7 @@ create table if not exists students (
   weight_goal numeric,
   height numeric,
   member_since date default now(),
+  membership_end date,
   private_notes text,
   created_at timestamptz not null default now()
 );
@@ -68,7 +69,8 @@ create table if not exists routine_days (
   routine_id uuid not null references routines(id) on delete cascade,
   day_name text not null,       -- 'lunes', 'martes', ...
   sort_order int not null default 0,
-  label text                    -- ej. 'Pecho', 'Descanso'
+  label text,                   -- ej. 'Pecho', 'Descanso'
+  unique (routine_id, day_name) -- requerido por el upsert del builder
 );
 
 create table if not exists routine_exercises (
@@ -86,7 +88,7 @@ create table if not exists routine_exercises (
 create table if not exists follow_ups (
   id uuid primary key default gen_random_uuid(),
   coach_id uuid not null references profiles(id) on delete cascade,
-  student_id uuid not null references students(id) on delete cascade,
+  student_id uuid references students(id) on delete cascade,  -- null = objetivo general del coach
   title text not null,
   subtitle text,
   due_at timestamptz not null default now(),
@@ -99,6 +101,14 @@ create table if not exists weight_logs (
   student_id uuid not null references students(id) on delete cascade,
   weight numeric not null,
   logged_at date not null default now()
+);
+
+create table if not exists progress_photos (
+  id uuid primary key default gen_random_uuid(),
+  student_id uuid not null references students(id) on delete cascade,
+  path text not null,            -- ruta en el bucket privado (se firma al leer)
+  taken_at date not null default now(),
+  created_at timestamptz not null default now()
 );
 
 -- ---------- Comunidad ----------
@@ -148,6 +158,7 @@ alter table routine_days enable row level security;
 alter table routine_exercises enable row level security;
 alter table follow_ups enable row level security;
 alter table weight_logs enable row level security;
+alter table progress_photos enable row level security;
 alter table community_posts enable row level security;
 alter table community_likes enable row level security;
 alter table community_comments enable row level security;
@@ -200,6 +211,13 @@ create policy "weight_logs_coach_all" on weight_logs for all
 create policy "weight_logs_student_all" on weight_logs for all
   using (exists (select 1 from students s where s.id = weight_logs.student_id and s.profile_id = auth.uid()))
   with check (exists (select 1 from students s where s.id = weight_logs.student_id and s.profile_id = auth.uid()));
+
+-- progress_photos: el coach ve las de sus alumnos; el alumno gestiona las suyas
+create policy "progress_photos_coach_select" on progress_photos for select
+  using (exists (select 1 from students s where s.id = progress_photos.student_id and s.coach_id = auth.uid()));
+create policy "progress_photos_student_all" on progress_photos for all
+  using (exists (select 1 from students s where s.id = progress_photos.student_id and s.profile_id = auth.uid()))
+  with check (exists (select 1 from students s where s.id = progress_photos.student_id and s.profile_id = auth.uid()));
 
 -- community: visible para el coach y todos sus alumnos
 create policy "community_posts_coach_all" on community_posts for all

@@ -36,11 +36,11 @@ window.msfAuth = (function () {
     if (error) throw error;
   }
 
-  async function signUpCoach(email, password, fullName) {
+  async function signUpCoach(email, password, fullName, referralCode) {
     const { error } = await sb().auth.signUp({
       email,
       password,
-      options: { data: { role: "coach", full_name: fullName } },
+      options: { data: { role: "coach", full_name: fullName, referral_code: referralCode || "" } },
     });
     if (error) throw error;
   }
@@ -60,5 +60,27 @@ window.msfAuth = (function () {
     window.location.href = "login.html";
   }
 
-  return { getSessionProfile, requireRole, signIn, signUpCoach, signUpStudent, signOut };
+  /* Crea la cuenta de auth de un alumno DESDE el panel del coach, sin tocar
+     la sesión activa del coach. Usa un cliente Supabase efímero
+     (persistSession:false) para que el signUp no reemplace la sesión actual.
+     El trigger handle_new_user crea el profile (role 'alumno' + coach_id).
+     Devuelve el id del nuevo usuario, o null si el proyecto exige confirmar
+     email y no regresa user. */
+  async function createStudentAccount(email, password, fullName, coachId) {
+    const cfg = window.MSF_CONFIG;
+    const tempClient = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false, storageKey: "msf-temp-signup" },
+    });
+    const { data, error } = await tempClient.auth.signUp({
+      email,
+      password,
+      options: { data: { role: "alumno", full_name: fullName, coach_id: coachId } },
+    });
+    if (error) throw error;
+    // Cerrar cualquier sesión que el cliente temporal pudiera haber abierto.
+    try { await tempClient.auth.signOut(); } catch (_) { /* noop */ }
+    return data?.user?.id || null;
+  }
+
+  return { getSessionProfile, requireRole, signIn, signUpCoach, signUpStudent, createStudentAccount, signOut };
 })();

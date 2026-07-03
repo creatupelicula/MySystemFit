@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="assets/css/tokens.css" />
 <link rel="stylesheet" href="assets/css/app.css" />
+<script src="assets/js/theme.js"></script>
 <style>
   .auth-wrap { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
   .auth-card { width: 100%; max-width: 400px; }
@@ -55,6 +56,10 @@
         <label>ID de tu coach</label>
         <input class="input" id="suCoachId" placeholder="Tu coach te lo comparte">
       </div>
+      <div class="field" id="suRefCodeField">
+        <label>Código de referido (opcional)</label>
+        <input class="input" id="suRefCode" placeholder="Ej. MSF-AB12CD">
+      </div>
       <button class="btn btn--primary btn--block" type="submit">Crear cuenta</button>
       <div class="auth-error" id="signupError"></div>
     </form>
@@ -99,6 +104,7 @@
     $("#roleAlumno").classList.toggle("btn--primary", signupRole === "alumno");
     $("#roleAlumno").classList.toggle("btn--ghost", signupRole !== "alumno");
     $("#suCoachIdField").style.display = signupRole === "alumno" ? "" : "none";
+    $("#suRefCodeField").style.display = signupRole === "coach" ? "" : "none";
   }
   $("#roleCoach").addEventListener("click", () => { signupRole = "coach"; paintRole(); });
   $("#roleAlumno").addEventListener("click", () => { signupRole = "alumno"; paintRole(); });
@@ -127,7 +133,7 @@
       const email = $("#suEmail").value.trim();
       const pass = $("#suPassword").value;
       if (signupRole === "coach") {
-        await window.msfAuth.signUpCoach(email, pass, name);
+        await window.msfAuth.signUpCoach(email, pass, name, $("#suRefCode").value.trim());
       } else {
         const coachId = $("#suCoachId").value.trim();
         if (!coachId) throw new Error("Necesitas el ID de tu coach para registrarte.");
