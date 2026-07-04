@@ -74,7 +74,8 @@ window.msfAuth = (function () {
     const { data, error } = await tempClient.auth.signUp({
       email,
       password,
-      options: { data: { role: "alumno", full_name: fullName, coach_id: coachId } },
+      // created_by_coach: el trigger NO crea la ficha students (el panel la crea él mismo)
+      options: { data: { role: "alumno", full_name: fullName, coach_id: coachId, created_by_coach: "1" } },
     });
     if (error) throw error;
     // Cerrar cualquier sesión que el cliente temporal pudiera haber abierto.
@@ -82,5 +83,19 @@ window.msfAuth = (function () {
     return data?.user?.id || null;
   }
 
-  return { getSessionProfile, requireRole, signIn, signUpCoach, signUpStudent, createStudentAccount, signOut };
+  /* Envía el correo de recuperación; el enlace regresa a login.html donde
+     supabase-js emite PASSWORD_RECOVERY y se muestra el formulario de nueva clave. */
+  async function requestPasswordReset(email) {
+    const { error } = await sb().auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + window.location.pathname.replace(/[^/]*$/, "") + "login.html",
+    });
+    if (error) throw error;
+  }
+
+  async function updatePassword(newPassword) {
+    const { error } = await sb().auth.updateUser({ password: newPassword });
+    if (error) throw error;
+  }
+
+  return { getSessionProfile, requireRole, signIn, signUpCoach, signUpStudent, createStudentAccount, signOut, requestPasswordReset, updatePassword };
 })();

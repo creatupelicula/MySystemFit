@@ -67,10 +67,28 @@
 
     <!-- ---------- LOGIN ---------- -->
     <form id="formLogin">
-      <div class="field"><label>Email</label><input class="input" type="email" id="loginEmail" required autocomplete="email"></div>
-      <div class="field"><label>Contraseña</label><input class="input" type="password" id="loginPassword" required autocomplete="current-password"></div>
+      <div class="field"><label for="loginEmail">Email</label><input class="input" type="email" id="loginEmail" required autocomplete="email"></div>
+      <div class="field"><label for="loginPassword">Contraseña</label><input class="input" type="password" id="loginPassword" required autocomplete="current-password"></div>
       <button class="btn btn--primary btn--block" type="submit">Entrar</button>
       <div class="auth-error" id="loginError"></div>
+      <div class="auth-switch"><a id="forgotLink">¿Olvidaste tu contraseña?</a></div>
+    </form>
+
+    <!-- ---------- RECUPERAR CONTRASEÑA ---------- -->
+    <form id="formForgot" class="hidden">
+      <p class="auth-sub" style="margin-bottom:12px">Te enviaremos un enlace para restablecer tu contraseña.</p>
+      <div class="field"><label for="forgotEmail">Email</label><input class="input" type="email" id="forgotEmail" required autocomplete="email"></div>
+      <button class="btn btn--primary btn--block" type="submit">Enviar enlace</button>
+      <div class="auth-error" id="forgotError"></div>
+      <div class="auth-switch"><a id="backToLogin">Volver a iniciar sesión</a></div>
+    </form>
+
+    <!-- ---------- NUEVA CONTRASEÑA (tras el enlace del correo) ---------- -->
+    <form id="formReset" class="hidden">
+      <p class="auth-sub" style="margin-bottom:12px">Escribe tu nueva contraseña.</p>
+      <div class="field"><label for="resetPassword">Nueva contraseña</label><input class="input" type="password" id="resetPassword" required minlength="6" autocomplete="new-password"></div>
+      <button class="btn btn--primary btn--block" type="submit">Guardar contraseña</button>
+      <div class="auth-error" id="resetError"></div>
     </form>
 
     <!-- ---------- SIGNUP ---------- -->
@@ -107,12 +125,76 @@
   "use strict";
   const $ = (s) => document.querySelector(s);
 
-  // Si ya hay sesión activa, saltar directo a la app correspondiente.
+  // Traducción de los errores más comunes de Supabase Auth.
+  function authMsg(ex) {
+    const m = ex?.message || "";
+    if (/invalid login credentials/i.test(m)) return "Email o contraseña incorrectos.";
+    if (/email not confirmed/i.test(m)) return "Confirma tu correo antes de iniciar sesión.";
+    if (/rate limit/i.test(m)) return "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.";
+    if (/already registered|already been registered/i.test(m)) return "Ese correo ya tiene una cuenta.";
+    if (/at least 6 characters/i.test(m)) return "La contraseña debe tener al menos 6 caracteres.";
+    return m || "Algo salió mal. Inténtalo de nuevo.";
+  }
+
+  // Enlace de recuperación: cuando el usuario llega desde el correo,
+  // supabase-js emite PASSWORD_RECOVERY → mostramos el formulario de nueva clave.
+  let recovering = false;
+  window.msfSupabase?.auth.onAuthStateChange((event) => {
+    if (event === "PASSWORD_RECOVERY") {
+      recovering = true;
+      ["formLogin", "formSignup", "formForgot"].forEach((id) => $("#" + id).classList.add("hidden"));
+      document.querySelector(".auth-tabs").classList.add("hidden");
+      $("#formReset").classList.remove("hidden");
+    }
+  });
+
+  // Si ya hay sesión activa (y no es un flujo de recuperación), saltar a la app.
   (async () => {
     if (!window.msfSupabase) return;
+    await new Promise((r) => setTimeout(r, 400)); // deja que PASSWORD_RECOVERY dispare primero
+    if (recovering) return;
     const result = await window.msfAuth.getSessionProfile();
     if (result) window.location.href = result.profile.role === "coach" ? "index.html" : "alumno.html";
   })();
+
+  $("#forgotLink").addEventListener("click", () => {
+    $("#formLogin").classList.add("hidden");
+    $("#formForgot").classList.remove("hidden");
+    $("#forgotEmail").value = $("#loginEmail").value;
+  });
+  $("#backToLogin").addEventListener("click", () => {
+    $("#formForgot").classList.add("hidden");
+    $("#formLogin").classList.remove("hidden");
+  });
+  $("#formForgot").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const err = $("#forgotError");
+    err.style.display = "none";
+    try {
+      await window.msfAuth.requestPasswordReset($("#forgotEmail").value.trim());
+      err.style.color = "var(--lime)";
+      err.textContent = "Listo. Revisa tu correo y sigue el enlace.";
+      err.style.display = "block";
+    } catch (ex) {
+      err.style.color = "var(--coral)";
+      err.textContent = authMsg(ex);
+      err.style.display = "block";
+    }
+  });
+  $("#formReset").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const err = $("#resetError");
+    err.style.display = "none";
+    try {
+      await window.msfAuth.updatePassword($("#resetPassword").value);
+      const result = await window.msfAuth.getSessionProfile();
+      window.location.href = result?.profile.role === "coach" ? "index.html" : "alumno.html";
+    } catch (ex) {
+      err.style.color = "var(--coral)";
+      err.textContent = authMsg(ex);
+      err.style.display = "block";
+    }
+  });
 
   $("#tabLogin").addEventListener("click", () => {
     $("#tabLogin").classList.replace("btn--ghost", "btn--primary");
@@ -149,7 +231,7 @@
       const result = await window.msfAuth.getSessionProfile();
       window.location.href = result.profile.role === "coach" ? "index.html" : "alumno.html";
     } catch (ex) {
-      err.textContent = ex.message || "No se pudo iniciar sesión.";
+      err.textContent = authMsg(ex);
       err.style.display = "block";
     }
   });
@@ -167,6 +249,12 @@
       } else {
         const coachId = $("#suCoachId").value.trim();
         if (!coachId) throw new Error("Necesitas el ID de tu coach para registrarte.");
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(coachId)) {
+          throw new Error("Ese ID de coach no tiene el formato correcto. Pídeselo de nuevo a tu coach.");
+        }
+        const { data: ok, error: rpcErr } = await window.msfSupabase.rpc("coach_exists", { cid: coachId });
+        if (rpcErr) throw rpcErr;
+        if (!ok) throw new Error("No encontramos ningún coach con ese ID. Verifícalo con tu coach.");
         await window.msfAuth.signUpStudent(email, pass, name, coachId);
       }
       const result = await window.msfAuth.getSessionProfile();
@@ -176,7 +264,7 @@
       err.textContent = "Cuenta creada. Revisa tu correo para confirmar y luego inicia sesión.";
     } catch (ex) {
       err.style.color = "var(--coral)";
-      err.textContent = ex.message || "No se pudo crear la cuenta.";
+      err.textContent = authMsg(ex);
       err.style.display = "block";
     }
   });
