@@ -363,9 +363,16 @@
           </div>
           <div class="stack gap-4">
             <div class="card border-conic">
-              <div class="section-title">Plan</div>
+              <div class="section-title">Plan y suscripción</div>
               <div class="row between"><div><div style="font-weight:700;font-size:18px"><span id="planName">Star</span> <span class="badge badge--star">★</span></div><p class="t3 text-sm" id="planDesc"></p></div><div class="mono" id="planUsage" style="font-size:18px;font-weight:700"></div></div>
               <div class="mt-4" style="height:8px;background:var(--bg-base);border-radius:999px;overflow:hidden"><div id="planUsageBar" style="height:100%;width:0;background:var(--indigo);border-radius:999px;transition:width .4s var(--ease)"></div></div>
+              <div id="subStatusRow" class="row between mt-4 hidden" style="align-items:center"><span class="t3 text-sm">Estado de la suscripción</span><span id="subStatusBadge" class="badge"></span></div>
+              <div class="row gap-3 mt-4" id="planActions">
+                <button class="btn btn--ghost btn--sm" id="btnPlanStar" style="flex:1">Star · $500/mes</button>
+                <button class="btn btn--primary btn--sm" id="btnPlanStarPlus" style="flex:1">Star Plus · $1,000/mes</button>
+              </div>
+              <button class="btn btn--ghost btn--sm btn--block mt-4 hidden" id="btnManageSub">Administrar suscripción</button>
+              <p class="t3 text-sm mt-4" id="planHint" style="text-align:center"></p>
             </div>
             <div class="card">
               <div class="section-title">Apariencia</div>

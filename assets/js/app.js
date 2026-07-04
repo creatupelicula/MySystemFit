@@ -1104,14 +1104,19 @@
     // Badge del plan en el sidebar
     const planBadge = $(".coach-card__plan .badge");
     if (planBadge) planBadge.textContent = "★ " + plan;
-    // Candados en la navegación
+    // Candados en la navegación: se añaden si la feature está bloqueada y se
+    // quitan si el plan la desbloquea (p. ej. tras subir a Star Plus).
     Object.entries(VIEW_FEATURE).forEach(([view, feat]) => {
       const item = $(`.nav__item[data-nav="${view}"]`);
-      if (item && !FEATURES[feat] && !item.querySelector("svg[data-lock]")) {
+      if (!item) return;
+      const existing = item.querySelector("svg[data-lock]");
+      if (!FEATURES[feat] && !existing) {
         const tmp = document.createElement("span");
         tmp.innerHTML = lockSvg;
         tmp.firstChild.dataset.lock = "1";
         item.appendChild(tmp.firstChild);
+      } else if (FEATURES[feat] && existing) {
+        existing.remove();
       }
     });
     // Tarjeta del plan en Ajustes: nombre, límite y uso
@@ -1122,6 +1127,97 @@
       : `Hasta ${limit} alumnos · Gestión de alumnos y pagos`);
     $("#planUsage") && ($("#planUsage").textContent = `${STUDENTS.length}/${limit}`);
     $("#planUsageBar") && ($("#planUsageBar").style.width = Math.min(100, (STUDENTS.length / limit) * 100) + "%");
+    renderSubscription();
+  }
+
+  /* ---------- Suscripción (Stripe) ---------- */
+  const STATUS_LABEL = {
+    active: ["Activa", "badge--ok"], trialing: ["Prueba", "badge--ok"],
+    past_due: ["Pago pendiente", "badge--pend"], unpaid: ["Sin pagar", "badge--late"],
+    canceled: ["Cancelada", "badge--late"], incomplete: ["Incompleta", "badge--pend"],
+    incomplete_expired: ["Expirada", "badge--late"],
+  };
+  function renderSubscription() {
+    const plan = PROFILE.plan || "Star";
+    const status = PROFILE.subscription_status;
+    const active = status === "active" || status === "trialing";
+    const row = $("#subStatusRow"), badge = $("#subStatusBadge");
+    if (row && badge) {
+      if (status) {
+        row.classList.remove("hidden");
+        const [txt, cls] = STATUS_LABEL[status] || [status, "badge--pend"];
+        badge.textContent = txt;
+        badge.className = "badge " + cls;
+      } else {
+        row.classList.add("hidden");
+      }
+    }
+    // Botones: resalta el plan actual, ofrece el cambio, y muestra "Administrar" si ya hay suscripción.
+    const bStar = $("#btnPlanStar"), bPlus = $("#btnPlanStarPlus"), manage = $("#btnManageSub"), hint = $("#planHint");
+    if (bStar && bPlus) {
+      bStar.disabled = active && plan === "Star";
+      bPlus.disabled = active && plan === "Star Plus";
+      bStar.textContent = plan === "Star" && active ? "Star · plan actual" : "Star · $500/mes";
+      bPlus.textContent = plan === "Star Plus" && active ? "Star Plus · plan actual" : "Star Plus · $1,000/mes";
+    }
+    if (manage) manage.classList.toggle("hidden", !PROFILE.stripe_customer_id);
+    if (hint) {
+      hint.textContent = active
+        ? (PROFILE.current_period_end ? `Se renueva el ${new Date(PROFILE.current_period_end).toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: "numeric" })}` : "")
+        : "Suscríbete para activar tu plan. Pagos seguros con Stripe.";
+    }
+  }
+
+  async function startCheckout(plan) {
+    try {
+      const { data: { session } } = await window.msfSupabase.auth.getSession();
+      if (!session) return toast("Sesión expirada, vuelve a entrar", "", "err");
+      toast("Abriendo pago seguro…", "", "info");
+      const r = await fetch("/api/checkout", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ access_token: session.access_token, plan }),
+      });
+      const data = await r.json();
+      if (!r.ok || !data.url) throw new Error(data.error || "No se pudo iniciar el pago");
+      window.location.href = data.url;
+    } catch (ex) { errToast(ex, "No se pudo iniciar el pago"); }
+  }
+  async function openPortal() {
+    try {
+      const { data: { session } } = await window.msfSupabase.auth.getSession();
+      if (!session) return toast("Sesión expirada, vuelve a entrar", "", "err");
+      const r = await fetch("/api/portal", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ access_token: session.access_token }),
+      });
+      const data = await r.json();
+      if (!r.ok || !data.url) throw new Error(data.error || "No se pudo abrir el portal");
+      window.location.href = data.url;
+    } catch (ex) { errToast(ex, "No se pudo abrir el portal"); }
+  }
+  $("#btnPlanStar")?.addEventListener("click", () => startCheckout("Star"));
+  $("#btnPlanStarPlus")?.addEventListener("click", () => startCheckout("Star Plus"));
+  $("#btnManageSub")?.addEventListener("click", openPortal);
+
+  /* Al volver de Stripe: refresca el perfil (el webhook ya sincronizó el plan). */
+  async function handleCheckoutReturn() {
+    const params = new URLSearchParams(location.search);
+    const state = params.get("checkout");
+    if (!state) return;
+    history.replaceState({}, "", location.pathname);
+    if (state === "cancel") { toast("Pago cancelado", "", "info"); return; }
+    toast("Confirmando tu suscripción…", "", "info");
+    // El webhook puede tardar un par de segundos; reintenta leyendo el perfil.
+    for (let i = 0; i < 6; i++) {
+      await new Promise((r) => setTimeout(r, 1500));
+      const fresh = await window.msfAuth.getSessionProfile();
+      if (fresh?.profile) {
+        PROFILE = fresh.profile;
+        applyPlanGating();
+        if (PROFILE.subscription_status === "active") { toast("¡Suscripción activa! 🎉", `Plan ${PROFILE.plan}`, "ok"); return; }
+      }
+    }
+    toast("Pago recibido. Si el plan no cambió, recarga en un momento.", "", "info");
   }
 
   /* ---------- Referidos ---------- */
@@ -1243,6 +1339,7 @@
     renderAccentSwatches();
     renderAttendanceToday();
     subscribeRealtime();
+    handleCheckoutReturn();
   }
 
   document.addEventListener("DOMContentLoaded", init);
