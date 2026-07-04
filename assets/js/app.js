@@ -1475,6 +1475,14 @@
     };
     $("#btnCopyInvite")?.addEventListener("click", copyInvite);
     $("#btnCopyInvite2")?.addEventListener("click", copyInvite);
+    // Código corto del coach (para la pantalla de "código de tu coach")
+    if (PROFILE.referral_code) {
+      $("#coachCodeDisplay") && ($("#coachCodeDisplay").textContent = PROFILE.referral_code);
+      $("#btnCopyCode")?.addEventListener("click", async () => {
+        try { await navigator.clipboard.writeText(PROFILE.referral_code); toast("Código copiado", PROFILE.referral_code, "ok"); }
+        catch { toast("Cópialo manualmente", PROFILE.referral_code, "info"); }
+      });
+    }
 
     try {
       [STUDENTS, PAYMENTS, FOLLOW_UPS] = await Promise.all([
