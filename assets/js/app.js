@@ -273,6 +273,22 @@
     $("#dwSince") && ($("#dwSince").textContent = s.member_since ? new Date(s.member_since).toLocaleDateString("es-MX", { month: "long", year: "numeric" }) : "—");
     $("#dwNotes") && ($("#dwNotes").value = s.private_notes || "");
 
+    // Objetivos del onboarding del alumno (solo si ya lo completó)
+    const obCard = $("#dwOnboardingCard");
+    if (obCard) {
+      if (s.onboarding_completed_at) {
+        obCard.classList.remove("hidden");
+        $("#dwWeightGoal") && ($("#dwWeightGoal").textContent = s.weight_goal ?? "—");
+        $("#dwExperience") && ($("#dwExperience").textContent = s.experience_level || "—");
+        $("#dwFrequency") && ($("#dwFrequency").textContent = s.training_frequency ? s.training_frequency + " días/sem" : "—");
+        $("#dwTargetDate") && ($("#dwTargetDate").textContent = s.target_date ? new Date(s.target_date + "T00:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" }) : "—");
+        $("#dwInjuries") && ($("#dwInjuries").textContent = s.injuries || "Ninguna");
+        $("#dwMotivation") && ($("#dwMotivation").textContent = s.motivation || "—");
+      } else {
+        obCard.classList.add("hidden");
+      }
+    }
+
     const dwPayments = $("#dwPayments");
     if (dwPayments) {
       const rows = PAYMENTS.filter((p) => p.student_id === id);
