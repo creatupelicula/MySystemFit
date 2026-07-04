@@ -34,7 +34,10 @@
     setTimeout(() => { el.classList.add("out"); setTimeout(() => el.remove(), 220); }, 2800);
   }
   window.msfToast = toast;
-  function errToast(e, fallback) { toast(fallback, e?.message || "", "err"); }
+  function errToast(e, fallback) {
+    console.error(fallback + ":", e); // detalle técnico solo a consola, nunca al usuario
+    toast(fallback, api.friendlyError(e), "err");
+  }
 
   /* ---------- Navegación entre vistas ---------- */
   const titles = {
@@ -1316,7 +1319,15 @@
     $("#profName") && ($("#profName").value = PROFILE.full_name);
     $("#profEmail") && ($("#profEmail").value = PROFILE.email);
     $("#profSpecialty") && ($("#profSpecialty").value = PROFILE.specialty || "");
-    $("#coachIdDisplay") && ($("#coachIdDisplay").textContent = PROFILE.id);
+    // Enlace de invitación permanente del coach (login?coach=<id>)
+    const inviteUrl = `${location.origin}/login?coach=${PROFILE.id}`;
+    $("#inviteLinkDisplay") && ($("#inviteLinkDisplay").textContent = inviteUrl);
+    const copyInvite = async () => {
+      try { await navigator.clipboard.writeText(inviteUrl); toast("Enlace copiado", "Compártelo con tus alumnos", "ok"); }
+      catch { toast("Cópialo manualmente", inviteUrl, "info"); }
+    };
+    $("#btnCopyInvite")?.addEventListener("click", copyInvite);
+    $("#btnCopyInvite2")?.addEventListener("click", copyInvite);
 
     try {
       [STUDENTS, PAYMENTS, FOLLOW_UPS] = await Promise.all([

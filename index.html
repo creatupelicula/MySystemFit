@@ -338,6 +338,9 @@
               <div class="mono" id="refCodeDisplay" style="font-size:24px;font-weight:700;letter-spacing:1px;padding:14px 20px;background:var(--bg-base);border-radius:12px;border:1px dashed var(--border)">—</div>
               <button class="btn btn--primary" id="btnCopyRefCode">Copiar</button>
             </div>
+            <div class="section-title mt-6">Invita a tus alumnos</div>
+            <p class="t3 text-sm mb-4">Con este enlace tus alumnos crean su cuenta ya vinculada a ti, sin escribir códigos.</p>
+            <button class="btn btn--lime btn--block" id="btnCopyInvite2">Copiar enlace de invitación</button>
           </div>
           <div class="card">
             <div class="section-title">Coaches referidos <span class="badge badge--ok" id="refCount">0</span></div>
@@ -352,7 +355,7 @@
         <div class="grid-2">
           <div class="card">
             <div class="section-title">Perfil del coach</div>
-            <div class="row gap-4 mb-4"><div class="avatar avatar--xl"></div><div><p class="t3 text-sm">Tu ID de coach (compártelo con tus alumnos para que se registren):</p><p class="mono text-sm" id="coachIdDisplay" style="word-break:break-all"></p></div></div>
+            <div class="row gap-4 mb-4"><div class="avatar avatar--xl"></div><div style="flex:1"><p class="t3 text-sm">Tu enlace de invitación (tus alumnos se registran con un clic, sin escribir nada):</p><p class="mono text-sm" id="inviteLinkDisplay" style="word-break:break-all"></p><button type="button" class="btn btn--primary btn--sm mt-4" id="btnCopyInvite">Copiar enlace de invitación</button></div></div>
             <form id="formProfile">
               <div class="field"><label>Nombre</label><input class="input" id="profName"></div>
               <div class="field"><label>Email</label><input class="input" id="profEmail" disabled></div>

@@ -19,7 +19,11 @@
     stack.appendChild(el);
     setTimeout(() => { el.classList.add("out"); setTimeout(() => el.remove(), 220); }, 2600);
   }
-  function errToast(e, fallback) { toast(fallback + (e?.message ? ": " + e.message : ""), "info"); }
+  function errToast(e, fallback) {
+    console.error(fallback + ":", e); // detalle técnico solo a consola, nunca al usuario
+    const extra = api.friendlyError(e);
+    toast(fallback + (extra ? ": " + extra : ""), "info");
+  }
 
   /* Navegación bottom nav */
   function anav(view) {
@@ -219,7 +223,7 @@
         .order("due_date").limit(1);
       if (error) throw error;
       if (data?.length) {
-        btn.textContent = `Pago pendiente · $${Number(data[0].amount).toLocaleString("es-MX")} — Hablar con tu coach`;
+        btn.textContent = `Pago pendiente: $${Number(data[0].amount).toLocaleString("es-MX")}`;
         btn.classList.remove("hidden");
         btn.onclick = () => anav("chat");
       }

@@ -8,6 +8,24 @@ window.msfApi = (function () {
   const ESC_MAP = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
   const esc = (str) => String(str ?? "").replace(/[&<>"']/g, (c) => ESC_MAP[c]);
 
+  /* Traduce errores técnicos (Auth/BD/red) a mensajes de marca en español.
+     El detalle técnico NUNCA se muestra al usuario: va solo a console.error. */
+  function friendlyError(ex) {
+    const m = ex?.message || "";
+    if (ex?._planLimit || /PLAN_LIMIT/.test(m)) return "Alcanzaste el límite de alumnos de tu plan. Mejora tu plan para agregar más.";
+    if (/invalid login credentials/i.test(m)) return "Email o contraseña incorrectos.";
+    if (/email not confirmed/i.test(m)) return "Confirma tu correo antes de iniciar sesión.";
+    if (/rate limit|too many requests/i.test(m)) return "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.";
+    if (/already registered|already been registered|duplicate key/i.test(m)) return "Ese registro ya existe.";
+    if (/at least 6 characters|password/i.test(m) && /weak|short|characters/i.test(m)) return "La contraseña debe tener al menos 6 caracteres.";
+    if (/jwt|token|session|expired/i.test(m)) return "Tu sesión expiró. Vuelve a iniciar sesión.";
+    if (/failed to fetch|networkerror|network request failed|load failed/i.test(m)) return "Sin conexión. Revisa tu internet e inténtalo de nuevo.";
+    if (/violates row-level security|permission denied|not authorized/i.test(m)) return "No tienes permiso para hacer eso.";
+    if (/violates foreign key|violates check constraint|invalid input syntax/i.test(m)) return "Los datos no son válidos. Revisa el formulario.";
+    if (/payload too large|exceeded the maximum allowed size/i.test(m)) return "El archivo es demasiado grande.";
+    return ""; // sin traducción conocida: el llamador muestra solo su mensaje base
+  }
+
   /* ---------- Planes ---------- */
   const PLAN_LIMITS = { "Star": 30, "Star Plus": 100, "Kings": 500 };
   // Qué features incluye cada plan; la UI se bloquea con esto y la BD
@@ -374,7 +392,7 @@ window.msfApi = (function () {
   }
 
   return {
-    initials, esc,
+    initials, esc, friendlyError,
     planLimit, planFeatures, countStudents,
     getReferralInfo,
     setAttendance, listAttendance, listCoachAttendance,
