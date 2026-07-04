@@ -23,7 +23,7 @@ La base de datos del proyecto Supabase **MySystemFit** (`fqlwirnaproktxrtdqya`) 
 
 **Alumno** (`alumno.html`): anillo de progreso según peso vs meta, membresía a la vista, **asistencia diaria para presenciales** (¿vas hoy? sí/no + motivo → el coach lo ve en su dashboard), rutina del día con músculo por ejercicio, fotos de progreso (Supabase Storage privado, URLs firmadas), evolución de peso, comunidad del coach, chat en tiempo real.
 
-**Registro** (`login.html`): coach (con campo opcional de código de referido) o alumno (con ID del coach). El trigger `handle_new_user` crea el perfil, asigna plan Star, genera código de referido y registra el referido si aplica.
+**Registro** (`login.html`): coach (con campo opcional de código de referido) o alumno (con ID del coach, validado contra la BD antes de crear la cuenta). El trigger `handle_new_user` crea el perfil, asigna plan Star, genera código de referido, registra el referido si aplica, y para alumnos auto-registrados crea también su ficha en `students` (visible para su coach desde el primer momento). Incluye recuperación de contraseña por correo.
 
 ### Aislamiento multi-coach
 
@@ -44,9 +44,18 @@ RLS verificado por pruebas: un coach no ve alumnos/pagos/asistencia de otro; un 
 - `assets/js/auth.js` — sesión, login/signup, alta de cuenta de alumno desde el panel.
 - `supabase/schema.sql` + `supabase/migration_planes.sql` — schema completo de referencia.
 
+## Auditoría 2026-07 (aplicada)
+
+- **XSS almacenado corregido**: todo contenido de usuario que se interpola en `innerHTML` pasa por `api.esc()`. Verificado en navegador con payloads reales en nombres, mensajes, posts y motivos de asistencia.
+- **BD endurecida** (ver `supabase/migration_auditoria.sql`): `search_path` fijo, sin `EXECUTE` público en funciones definer, 22 índices de FK, políticas RLS con `(select auth.uid())`, política para que el alumno lea el perfil de su coach.
+- **Cero datos decorativos**: KPIs, deltas, sparklines, gráfico de peso, membresía y estadísticas semanales se calculan de datos reales; estados vacíos donde no hay datos.
+- **Aislamiento multi-coach re-verificado** en navegador con dos roles activos.
+
 ## Pendiente (fuera del alcance actual, por decisión)
 
-- **Pagos online** (suscripción del coach y cobros a alumnos) — siguiente fase.
-- **Plan Kings + IA** (asistente, análisis de progreso, recomendaciones) — siguiente fase.
+- **Pagos online con Stripe** (suscripción del coach y cobros a alumnos) — siguiente fase; requiere cuenta Stripe, precios definidos y una función serverless para el webhook.
+- **SMTP propio** (Resend/Postmark/SendGrid): el SMTP integrado de Supabase limita a ~2 correos/hora, insuficiente para producción (registro, recuperación de contraseña).
+- **Protección de contraseñas filtradas**: activar "Leaked password protection" en el dashboard de Supabase (Auth → Settings).
+- **Plan Kings + IA** — siguiente fase (oculto en toda la UI; solo existe como constante interna).
 - Eliminar cuenta borra sesión pero no el usuario de `auth.users` (requiere Edge Function con `service_role`).
-- Empaquetado iOS/Android (Capacitor es el camino natural para este stack) — cuando el producto web esté validado.
+- Empaquetado iOS/Android (Capacitor) — cuando el producto web esté validado.
