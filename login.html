@@ -95,6 +95,21 @@
       <div class="auth-error" id="resetError"></div>
     </form>
 
+    <!-- ---------- VINCULACIÓN OBLIGATORIA CON EL COACH ---------- -->
+    <form id="formCoachGate" class="hidden">
+      <p class="auth-sub" style="margin-bottom:16px">Ya casi estás dentro. Escribe el código que te dio tu coach para conectarte con él.</p>
+      <div class="field">
+        <label for="gateCode">Código de tu coach</label>
+        <input class="input" id="gateCode" placeholder="MSF-AB12CD" autocomplete="off" autocapitalize="characters" spellcheck="false" style="text-transform:uppercase;letter-spacing:1px">
+      </div>
+      <div class="field hidden" id="gateCoachOk">
+        <div class="badge badge--ok" style="width:100%;justify-content:center;height:38px">✓ Tu coach: <span id="gateCoachName" style="margin-left:4px;font-weight:700"></span></div>
+      </div>
+      <button class="btn btn--primary btn--block" type="submit" id="gateSubmit" disabled>Conectarme con mi coach</button>
+      <div class="auth-error" id="gateError"></div>
+      <div class="auth-switch" style="margin-top:14px">¿No es tu cuenta? <a id="gateLogout">Cerrar sesión</a></div>
+    </form>
+
     <!-- ---------- SIGNUP ---------- -->
     <form id="formSignup" class="hidden">
       <div class="auth-role">
@@ -198,12 +213,83 @@
       } else if (profile.role === "alumno" && !profile.coach_id && coach && UUID_RE.test(coach)) {
         const { error } = await window.msfSupabase.rpc("claim_coach", { cid: coach });
         if (error) throw error;
+        profile.coach_id = coach; // refleja la vinculación para no mostrar la pantalla de código
       }
       localStorage.removeItem(OAUTH_ROLE_KEY);
       localStorage.removeItem(PENDING_COACH_KEY);
     } catch (ex) { console.error("No se pudo completar el perfil OAuth:", ex); }
     return profile;
   }
+
+  /* ---------- Pantalla obligatoria: vincular alumno con su coach ----------
+     Se muestra cuando hay sesión de un alumno SIN coach y SIN invitación
+     pendiente (típicamente tras entrar con Google directo). El alumno no
+     puede usar la app hasta escribir un código de coach válido. */
+  function showCoachGate() {
+    ["formLogin", "formSignup", "formForgot", "formReset"].forEach((id) => $("#" + id)?.classList.add("hidden"));
+    document.querySelector(".auth-tabs")?.classList.add("hidden");
+    $("#formCoachGate").classList.remove("hidden");
+    $("#gateCode").focus();
+  }
+  (function wireCoachGate() {
+    const input = $("#gateCode"), ok = $("#gateCoachOk"), nameEl = $("#gateCoachName"),
+          submit = $("#gateSubmit"), err = $("#gateError");
+    if (!input) return;
+    let debounce, lastCode = null, validCoachName = null;
+    input.addEventListener("input", () => {
+      const code = input.value.trim().toUpperCase();
+      err.style.display = "none";
+      ok.classList.add("hidden");
+      submit.disabled = true;
+      validCoachName = null;
+      clearTimeout(debounce);
+      if (!code) return;
+      debounce = setTimeout(async () => {
+        lastCode = code;
+        try {
+          const { data, error } = await window.msfSupabase.rpc("coach_name_by_code", { code });
+          if (input.value.trim().toUpperCase() !== lastCode) return; // respuesta obsoleta
+          if (error) throw error;
+          if (data) {
+            validCoachName = data;
+            nameEl.textContent = data;
+            ok.classList.remove("hidden");
+            submit.disabled = false;
+          } else {
+            err.style.color = "var(--coral)";
+            err.textContent = "No encontramos ese código. Verifícalo con tu coach.";
+            err.style.display = "block";
+          }
+        } catch (ex) { console.error("Validación de código:", ex); }
+      }, 400);
+    });
+    $("#formCoachGate").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const code = input.value.trim().toUpperCase();
+      submit.disabled = true; submit.textContent = "Conectando…";
+      err.style.display = "none";
+      try {
+        const { error } = await window.msfSupabase.rpc("claim_coach_by_code", { code });
+        if (error) throw error;
+        localStorage.removeItem(PENDING_COACH_KEY);
+        localStorage.removeItem(OAUTH_ROLE_KEY);
+        window.location.href = "alumno.html";
+      } catch (ex) {
+        submit.disabled = false; submit.textContent = "Conectarme con mi coach";
+        err.style.color = "var(--coral)";
+        err.textContent = /COACH_INVALIDO|CODIGO_INVALIDO/.test(ex?.message || "")
+          ? "Ese código no corresponde a ningún coach. Verifícalo."
+          : authMsg(ex);
+        err.style.display = "block";
+      }
+    });
+    $("#gateLogout").addEventListener("click", async () => {
+      await window.msfSupabase.auth.signOut();
+      localStorage.removeItem(PENDING_COACH_KEY);
+      localStorage.removeItem(OAUTH_ROLE_KEY);
+      location.href = "login.html";
+    });
+  })();
 
   // Si ya hay sesión activa (y no es un flujo de recuperación), saltar a la app.
   (async () => {
@@ -213,6 +299,8 @@
     const result = await window.msfAuth.getSessionProfile();
     if (result) {
       const profile = await completeOAuthProfile(result.profile);
+      // Alumno sin coach vinculado: obligar a escribir el código antes de entrar.
+      if (profile.role === "alumno" && !profile.coach_id) { showCoachGate(); return; }
       window.location.href = profile.role === "coach" ? "index.html" : "alumno.html";
     }
   })();
