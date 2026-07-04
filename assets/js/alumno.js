@@ -391,9 +391,15 @@
         const liked = p.community_likes.some((l) => l.profile_id === PROFILE.id);
         const card = document.createElement("div");
         card.className = "card mb-4";
+        const comments = (p.community_comments || []).slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        const commentsHtml = comments.map((c) => `<div class="row gap-3 mb-2"><div class="avatar avatar--sm">${api.initials(c.profiles?.full_name)}</div><div><div class="fw-600 text-sm">${api.esc(c.profiles?.full_name || "Alumno")}</div><div class="t3 text-sm">${api.esc(c.body)}</div></div></div>`).join("") || `<p class="t3 text-sm mb-2">Sé el primero en comentar.</p>`;
         card.innerHTML = `<div class="row gap-3 mb-4"><div class="avatar avatar--md">${api.initials(p.profiles?.full_name)}</div><div><div class="fw-600">${api.esc(p.profiles?.full_name || "Coach")}</div><div class="t3 text-sm">${new Date(p.created_at).toLocaleString("es-MX")}</div></div></div>
           <p style="margin-bottom:12px">${api.esc(p.body)}</p>
-          <div class="row gap-3 mt-4"><button class="pill js-react ${liked ? "is-active" : ""}" data-post="${p.id}" data-liked="${liked}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1a5.5 5.5 0 0 0-7.8 7.8l9 9 9-9a5.5 5.5 0 0 0 0-7.8z"/></svg><span>${p.community_likes.length}</span></button><button class="pill">💬 ${p.community_comments.length}</button></div>`;
+          <div class="row gap-3 mt-4"><button class="pill js-react ${liked ? "is-active" : ""}" data-post="${p.id}" data-liked="${liked}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1a5.5 5.5 0 0 0-7.8 7.8l9 9 9-9a5.5 5.5 0 0 0 0-7.8z"/></svg><span>${p.community_likes.length}</span></button><button class="pill js-comments-toggle" data-post="${p.id}">💬 ${comments.length}</button></div>
+          <div class="js-comments hidden" data-post="${p.id}" style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px">
+            ${commentsHtml}
+            <form class="js-comment-form row gap-3 mt-4" data-post="${p.id}"><input class="input js-comment-input" placeholder="Escribe un comentario…" style="flex:1" maxlength="500"><button class="btn btn--primary btn--sm" type="submit">Enviar</button></form>
+          </div>`;
         headP.after(card);
       });
       if (!posts.length) {
@@ -406,12 +412,33 @@
   }
   document.addEventListener("click", async (e) => {
     const r = e.target.closest(".js-react");
-    if (!r || !PROFILE) return;
-    const liked = r.dataset.liked === "true";
+    if (r && PROFILE) {
+      const liked = r.dataset.liked === "true";
+      try { await api.toggleLike(r.dataset.post, PROFILE.id, liked); renderCommunity(); }
+      catch (ex) { errToast(ex, "No se pudo procesar el like"); }
+      return;
+    }
+    const toggle = e.target.closest(".js-comments-toggle");
+    if (toggle) {
+      const box = document.querySelector(`.js-comments[data-post="${toggle.dataset.post}"]`);
+      box?.classList.toggle("hidden");
+      if (box && !box.classList.contains("hidden")) box.querySelector(".js-comment-input")?.focus();
+    }
+  });
+  document.addEventListener("submit", async (e) => {
+    const form = e.target.closest(".js-comment-form");
+    if (!form || !PROFILE) return;
+    e.preventDefault();
+    const input = form.querySelector(".js-comment-input");
+    const body = input.value.trim();
+    if (!body) return;
+    input.disabled = true;
     try {
-      await api.toggleLike(r.dataset.post, PROFILE.id, liked);
-      renderCommunity();
-    } catch (ex) { errToast(ex, "No se pudo procesar el like"); }
+      await api.addComment(form.dataset.post, PROFILE.id, body);
+      input.value = "";
+      renderCommunity(); // el realtime también refrescará
+    } catch (ex) { errToast(ex, "No se pudo enviar el comentario"); }
+    finally { input.disabled = false; }
   });
 
   /* ---------- Chat real con el coach ---------- */
@@ -458,6 +485,13 @@
       .on("postgres_changes",
         { event: "*", schema: "public", table: "student_objectives", filter: `student_id=eq.${STUDENT.id}` },
         () => loadMyObjectives())
+      // Comunidad de su coach: publicaciones/comentarios/likes en vivo
+      .on("postgres_changes",
+        { event: "*", schema: "public", table: "community_posts", filter: `coach_id=eq.${PROFILE.coach_id}` },
+        () => { if ($("#a-comunidad")?.classList.contains("is-active")) renderCommunity(); })
+      .on("postgres_changes",
+        { event: "*", schema: "public", table: "community_comments" },
+        () => { if ($("#a-comunidad")?.classList.contains("is-active")) renderCommunity(); })
       .subscribe();
   }
 

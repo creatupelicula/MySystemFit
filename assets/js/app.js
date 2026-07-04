@@ -883,12 +883,18 @@
       const posts = await api.listCommunityPosts(PROFILE.id);
       feed.innerHTML = posts.map((p) => {
         const liked = p.community_likes.some((l) => l.profile_id === PROFILE.id);
+        const comments = (p.community_comments || []).slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        const commentsHtml = comments.map((c) => `<div class="row gap-3 mb-2"><div class="avatar avatar--sm">${api.initials(c.profiles?.full_name)}</div><div><div class="fw-600 text-sm">${api.esc(c.profiles?.full_name || "Alumno")}</div><div class="t3 text-sm">${api.esc(c.body)}</div></div></div>`).join("") || `<p class="t3 text-sm mb-2">Sin comentarios aún.</p>`;
         return `<div class="card mb-4" data-post="${p.id}">
           <div class="row gap-3 mb-4"><div class="avatar avatar--md">${api.initials(p.profiles?.full_name)}</div><div><div class="fw-600">${api.esc(p.profiles?.full_name || "Coach")}</div><div class="t3 text-sm">${new Date(p.created_at).toLocaleString("es-MX")}</div></div></div>
           <p style="margin-bottom:12px">${api.esc(p.body)}</p>
           <div class="row gap-4 mt-4">
             <button class="pill js-like ${liked ? "is-active" : ""}" data-post="${p.id}" data-liked="${liked}">❤ ${p.community_likes.length}</button>
-            <button class="pill">💬 ${p.community_comments.length} comentarios</button>
+            <button class="pill js-comments-toggle" data-post="${p.id}">💬 ${comments.length} comentarios</button>
+          </div>
+          <div class="js-comments hidden" data-post="${p.id}" style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px">
+            ${commentsHtml}
+            <form class="js-comment-form row gap-3 mt-4" data-post="${p.id}"><input class="input js-comment-input" placeholder="Escribe un comentario…" style="flex:1" maxlength="500"><button class="btn btn--primary btn--sm" type="submit">Enviar</button></form>
           </div>
         </div>`;
       }).join("") || `<p class="t3 text-sm">Aún no hay publicaciones.</p>`;
@@ -907,12 +913,30 @@
   });
   document.addEventListener("click", async (e) => {
     const likeBtn = e.target.closest(".js-like");
-    if (!likeBtn) return;
-    const liked = likeBtn.dataset.liked === "true";
-    try {
-      await api.toggleLike(likeBtn.dataset.post, PROFILE.id, liked);
-      renderCommunity();
-    } catch (ex) { errToast(ex, "No se pudo procesar el like"); }
+    if (likeBtn) {
+      const liked = likeBtn.dataset.liked === "true";
+      try { await api.toggleLike(likeBtn.dataset.post, PROFILE.id, liked); renderCommunity(); }
+      catch (ex) { errToast(ex, "No se pudo procesar el like"); }
+      return;
+    }
+    const toggle = e.target.closest(".js-comments-toggle");
+    if (toggle) {
+      const box = document.querySelector(`.js-comments[data-post="${toggle.dataset.post}"]`);
+      box?.classList.toggle("hidden");
+      if (box && !box.classList.contains("hidden")) box.querySelector(".js-comment-input")?.focus();
+    }
+  });
+  document.addEventListener("submit", async (e) => {
+    const form = e.target.closest(".js-comment-form");
+    if (!form || !PROFILE) return;
+    e.preventDefault();
+    const input = form.querySelector(".js-comment-input");
+    const body = input.value.trim();
+    if (!body) return;
+    input.disabled = true;
+    try { await api.addComment(form.dataset.post, PROFILE.id, body); input.value = ""; renderCommunity(); }
+    catch (ex) { errToast(ex, "No se pudo enviar el comentario"); }
+    finally { input.disabled = false; }
   });
 
   /* ---------- Mensajes (persistido) ---------- */
@@ -1335,6 +1359,13 @@
       // Asistencia: un alumno confirma/cancela → refresca la lista del día
       .on("postgres_changes", { event: "*", schema: "public", table: "attendance", filter: `coach_id=eq.${PROFILE.id}` }, () => {
         renderAttendanceToday();
+      })
+      // Comunidad: comentarios/likes de alumnos en vivo
+      .on("postgres_changes", { event: "*", schema: "public", table: "community_posts", filter: `coach_id=eq.${PROFILE.id}` }, () => {
+        if ($("#view-comunidad")?.classList.contains("is-active")) renderCommunity();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "community_comments" }, () => {
+        if ($("#view-comunidad")?.classList.contains("is-active")) renderCommunity();
       })
       .subscribe();
   }
