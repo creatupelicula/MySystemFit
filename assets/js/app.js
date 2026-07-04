@@ -271,6 +271,15 @@
     $("#dwEmail") && ($("#dwEmail").textContent = s.email || "—");
     $("#dwPhone") && ($("#dwPhone").textContent = s.phone || "—");
     $("#dwSince") && ($("#dwSince").textContent = s.member_since ? new Date(s.member_since).toLocaleDateString("es-MX", { month: "long", year: "numeric" }) : "—");
+    const dwMem = $("#dwMembership");
+    if (dwMem) {
+      if (s.membership_end) {
+        const days = Math.ceil((new Date(s.membership_end) - new Date()) / 86400000);
+        const fecha = new Date(s.membership_end).toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" });
+        dwMem.textContent = days < 0 ? `Vencida (${fecha})` : days <= 5 ? `Vence ${fecha} · ${days}d` : `Activa hasta ${fecha}`;
+        dwMem.style.color = days < 0 ? "var(--coral)" : days <= 5 ? "var(--amber, #f0a020)" : "var(--lime)";
+      } else { dwMem.textContent = "Sin fecha de renovación"; dwMem.style.color = ""; }
+    }
     $("#dwNotes") && ($("#dwNotes").value = s.private_notes || "");
 
     // Objetivos del onboarding del alumno (solo si ya lo completó)
@@ -1322,6 +1331,10 @@
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "follow_ups", filter: `coach_id=eq.${PROFILE.id}` }, async () => {
         FOLLOW_UPS = await api.listFollowUps(PROFILE.id); renderFollowUps(); renderNotifications();
+      })
+      // Asistencia: un alumno confirma/cancela → refresca la lista del día
+      .on("postgres_changes", { event: "*", schema: "public", table: "attendance", filter: `coach_id=eq.${PROFILE.id}` }, () => {
+        renderAttendanceToday();
       })
       .subscribe();
   }

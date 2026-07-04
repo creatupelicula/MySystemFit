@@ -439,13 +439,25 @@
   function subscribeRealtime() {
     if (!STUDENT || !window.msfSupabase) return;
     window.msfSupabase
-      .channel("alumno-msgs-" + STUDENT.id)
+      .channel("alumno-rt-" + STUDENT.id)
       .on("postgres_changes",
         { event: "INSERT", schema: "public", table: "messages", filter: `student_id=eq.${STUDENT.id}` },
         (payload) => {
           if ($("#a-chat")?.classList.contains("is-active")) loadChat();
           else if (payload.new.sender_id !== PROFILE.id) toast("Nuevo mensaje de tu coach 💬", "info");
         })
+      // Cambios en su ficha (membresía, datos) → refresca en vivo
+      .on("postgres_changes",
+        { event: "UPDATE", schema: "public", table: "students", filter: `id=eq.${STUDENT.id}` },
+        (payload) => { STUDENT = { ...STUDENT, ...payload.new }; paintHome(); loadPendingPayment(); })
+      // Pagos (nuevo cargo o marcado como pagado por el coach)
+      .on("postgres_changes",
+        { event: "*", schema: "public", table: "payments", filter: `student_id=eq.${STUDENT.id}` },
+        () => loadPendingPayment())
+      // Objetivos asignados/quitados por el coach
+      .on("postgres_changes",
+        { event: "*", schema: "public", table: "student_objectives", filter: `student_id=eq.${STUDENT.id}` },
+        () => loadMyObjectives())
       .subscribe();
   }
 
