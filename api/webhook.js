@@ -5,12 +5,15 @@ const { stripe, admin, readRaw, PLAN_BY_PRICE } = require("./_lib");
 // Aplica el estado de una suscripción de Stripe sobre el perfil del coach.
 async function syncSubscription(db, sub) {
   const coachId = sub.metadata?.coach_id || null;
-  const priceId = sub.items?.data?.[0]?.price?.id;
+  const item = sub.items?.data?.[0];
+  const priceId = item?.price?.id;
   const plan = PLAN_BY_PRICE[priceId];
+  // current_period_end vive en el subscription_item (no en la suscripción) desde la API 2025+.
+  const periodEnd = item?.current_period_end ?? sub.current_period_end;
   const patch = {
     stripe_subscription_id: sub.id,
     subscription_status: sub.status, // active, trialing, past_due, canceled, unpaid...
-    current_period_end: sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null,
+    current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
   };
   // Solo un estado que da acceso mueve el plan efectivo del coach.
   if (plan && (sub.status === "active" || sub.status === "trialing" || sub.status === "past_due")) {
