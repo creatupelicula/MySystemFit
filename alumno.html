@@ -127,17 +127,18 @@
 
       <div class="section-title mt-6">Evolución de peso</div>
       <div class="card" style="background:var(--bg-base)">
-        <div class="chart-wrap" id="aWeightChartWrap" data-chart-unit="kg" data-chart-values="67.5,66.8,66.1,65.6,65.2,64.8,64.5,64.2">
+        <div class="chart-wrap" id="aWeightChartWrap" data-chart-unit="kg" data-chart-values="">
           <svg class="chart-svg" viewBox="0 0 400 140" preserveAspectRatio="none">
             <line class="chart-grid-line" x1="0" y1="35" x2="400" y2="35"/><line class="chart-grid-line" x1="0" y1="70" x2="400" y2="70"/><line class="chart-grid-line" x1="0" y1="105" x2="400" y2="105"/>
             <defs><linearGradient id="aFill" x1="0" y1="0" x2="0" y2="1"><stop class="stop-lime" offset="0%" stop-opacity="0.28"/><stop class="stop-lime" offset="100%" stop-opacity="0"/></linearGradient></defs>
-            <path d="M0,30 C60,38 100,44 160,58 C220,72 260,80 320,92 C360,100 380,104 400,108 L400,140 L0,140 Z" fill="url(#aFill)"/>
-            <path class="chart-line-lime" d="M0,30 C60,38 100,44 160,58 C220,72 260,80 320,92 C360,100 380,104 400,108" fill="none" stroke-width="2.5"/>
+            <path d="" fill="url(#aFill)"/>
+            <path class="chart-line-lime" d="" fill="none" stroke-width="2.5"/>
           </svg>
+          <p class="t3 text-sm" id="aWeightEmpty" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;margin:0">Aún no hay registros de peso.</p>
           <div class="chart-hover-dot" id="aWeightHoverDot" style="background:var(--lime);box-shadow:0 0 0 4px var(--lime-soft)"></div>
           <div class="chart-tooltip" id="aWeightTooltip"></div>
         </div>
-        <div class="row between mt-4"><span class="t3 text-sm">Últimas 8 semanas</span><span class="badge badge--ok">−3.3 kg</span></div>
+        <div class="row between mt-4"><span class="t3 text-sm" id="aWeightRange">Historial de peso</span><span class="badge badge--ok" id="aWeightDelta">—</span></div>
       </div>
     </section>
 

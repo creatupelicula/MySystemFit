@@ -15,7 +15,7 @@
     const ico = { ok: '<polyline points="20 6 9 17 4 12"/>', info: '<line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>' }[type];
     const el = document.createElement("div");
     el.className = "toast toast--" + type;
-    el.innerHTML = `<span class="toast__ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">${ico}</svg></span><div class="toast__txt">${txt}</div>`;
+    el.innerHTML = `<span class="toast__ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">${ico}</svg></span><div class="toast__txt">${api.esc(txt)}</div>`;
     stack.appendChild(el);
     setTimeout(() => { el.classList.add("out"); setTimeout(() => el.remove(), 220); }, 2600);
   }
@@ -104,7 +104,8 @@
     celebrate();
     toast("¡Sesión completada! 🔥 +1 a tu racha", "ok");
     if (STUDENT?.weight_current) {
-      try { await api.addWeightLog(STUDENT.id, STUDENT.weight_current); } catch (ex) { /* no bloquea la celebración */ }
+      try { await api.addWeightLog(STUDENT.id, STUDENT.weight_current); }
+      catch (ex) { console.error("No se registró el peso de la sesión:", ex); toast("Sesión completada, pero no se pudo registrar tu peso", "info"); }
     }
   });
 
@@ -135,7 +136,7 @@
     if (!file) return;
     pendingFile = file;
     const url = URL.createObjectURL(file);
-    prev.innerHTML = `<div class="card" style="display:flex;gap:12px;align-items:center"><img src="${url}" style="width:60px;height:80px;object-fit:cover;border-radius:8px"><div><div class="fw-600">Foto lista</div><div class="t3 text-sm">${file.name}</div></div><button class="btn btn--lime btn--sm" id="uploadPhotoBtn" style="margin-left:auto">Subir</button></div>`;
+    prev.innerHTML = `<div class="card" style="display:flex;gap:12px;align-items:center"><img src="${url}" style="width:60px;height:80px;object-fit:cover;border-radius:8px"><div><div class="fw-600">Foto lista</div><div class="t3 text-sm">${api.esc(file.name)}</div></div><button class="btn btn--lime btn--sm" id="uploadPhotoBtn" style="margin-left:auto">Subir</button></div>`;
   }
   dz?.addEventListener("drop", (e) => showPreview(e.dataTransfer.files[0]));
   fi?.addEventListener("change", (e) => showPreview(e.target.files[0]));
@@ -159,7 +160,7 @@
       const photos = await api.listProgressPhotos(STUDENT.id);
       if (!photos.length) return; // deja los placeholders de ejemplo
       grid.innerHTML = photos.map((p, i) => `<div class="photo-cell photo-cell--real"><span>${new Date(p.taken_at).toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}</span><img src="${p.url}" alt="Progreso ${i + 1}"></div>`).join("");
-    } catch (ex) { /* silencioso */ }
+    } catch (ex) { console.error("No se pudieron cargar las fotos de progreso:", ex); }
   }
 
   /* Tooltip interactivo en gráfico de peso */
@@ -216,7 +217,7 @@
     try {
       const rows = await api.listAttendance(STUDENT.id, todayStr(), todayStr());
       if (rows.length) paintAttendanceDone(rows[0]);
-    } catch (ex) { /* si falla, deja los botones activos */ }
+    } catch (ex) { console.error("No se pudo consultar la asistencia de hoy:", ex); }
   }
   function paintAttendanceDone(row) {
     $("#attendanceBtns")?.classList.add("hidden");
@@ -225,7 +226,7 @@
     if (st) {
       st.innerHTML = row.attending
         ? `<span class="badge badge--ok">Confirmado · Sí vas hoy 💪</span>`
-        : `<span class="badge badge--late">Hoy no vas</span> <span class="t3">${row.reason ? "· " + row.reason : ""}</span>`;
+        : `<span class="badge badge--late">Hoy no vas</span> <span class="t3">${row.reason ? "· " + api.esc(row.reason) : ""}</span>`;
     }
   }
   async function saveAttendance(attending, reason) {
@@ -264,7 +265,7 @@
         const row = document.createElement("div");
         row.className = "ex-row";
         row.dataset.ex = "";
-        row.innerHTML = `<div class="ex-check" data-check><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div><div class="ex-row__body"><div class="ex-row__name">${ex.name}${ex.muscle_group ? ` <span class="badge badge--plan" style="font-size:10px;height:18px;padding:0 8px">${ex.muscle_group}</span>` : ""}</div><div class="ex-row__meta">${ex.sets ?? "-"} × ${ex.reps ?? "-"} · ${ex.kg ?? "-"} kg · desc ${ex.rest_seconds ?? "-"}s</div></div><button class="btn btn--ghost btn--sm js-rest">Descanso</button>`;
+        row.innerHTML = `<div class="ex-check" data-check><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div><div class="ex-row__body"><div class="ex-row__name">${api.esc(ex.name)}${ex.muscle_group ? ` <span class="badge badge--plan" style="font-size:10px;height:18px;padding:0 8px">${api.esc(ex.muscle_group)}</span>` : ""}</div><div class="ex-row__meta">${ex.sets ?? "-"} × ${ex.reps ?? "-"} · ${ex.kg ?? "-"} kg · desc ${ex.rest_seconds ?? "-"}s</div></div><button class="btn btn--ghost btn--sm js-rest">Descanso</button>`;
         anchor?.parentElement.insertBefore(row, anchor);
       });
       updateSession();
@@ -277,14 +278,35 @@
     try {
       const logs = await api.listWeightLogs(STUDENT.id);
       const wrap = $("#aWeightChartWrap");
-      if (!wrap || !logs.length) return;
-      wrap.dataset.chartValues = logs.map((l) => l.weight).join(",");
-      attachChartTooltip(wrap, logs.map((l) => l.weight), " kg");
-      const first = logs[0].weight, last = logs[logs.length - 1].weight;
+      if (!wrap) return;
+      const empty = $("#aWeightEmpty");
+      if (!logs.length) { if (empty) empty.style.display = "flex"; return; }
+      if (empty) empty.style.display = "none";
+      const values = logs.map((l) => Number(l.weight));
+      wrap.dataset.chartValues = values.join(",");
+      // Dibuja la curva con los registros reales
+      const min = Math.min(...values), max = Math.max(...values);
+      const pts = values.map((v, i) => {
+        const x = values.length === 1 ? 200 : Math.round((i / (values.length - 1)) * 400);
+        const y = Math.round(110 - ((v - min) / (max - min || 1)) * 80);
+        return [x, y];
+      });
+      const line = "M" + pts.map((p) => p.join(",")).join(" L");
+      const svg = wrap.querySelector(".chart-svg");
+      const paths = svg?.querySelectorAll("path");
+      if (paths?.[0]) paths[0].setAttribute("d", line + " L400,140 L0,140 Z");
+      if (paths?.[1]) paths[1].setAttribute("d", line);
+      attachChartTooltip(wrap, values, " kg");
+      const first = values[0], last = values[values.length - 1];
       const delta = (last - first).toFixed(1);
-      const deltaEl = wrap.parentElement.querySelector(".badge");
-      if (deltaEl) deltaEl.textContent = `${delta > 0 ? "+" : ""}${delta} kg`;
-    } catch (ex) { /* silencioso: gráfico opcional */ }
+      const deltaEl = $("#aWeightDelta");
+      if (deltaEl) {
+        deltaEl.textContent = `${delta > 0 ? "+" : ""}${delta} kg`;
+        deltaEl.className = "badge " + (delta <= 0 ? "badge--ok" : "badge--pend");
+      }
+      const rangeEl = $("#aWeightRange");
+      if (rangeEl) rangeEl.textContent = `${logs.length} registro${logs.length === 1 ? "" : "s"} de peso`;
+    } catch (ex) { console.error("No se pudo cargar el historial de peso:", ex); }
   }
 
   /* ---------- Comunidad real ---------- */
@@ -300,8 +322,8 @@
         const liked = p.community_likes.some((l) => l.profile_id === PROFILE.id);
         const card = document.createElement("div");
         card.className = "card mb-4";
-        card.innerHTML = `<div class="row gap-3 mb-4"><div class="avatar avatar--md">${api.initials(p.profiles?.full_name)}</div><div><div class="fw-600">${p.profiles?.full_name || "Coach"}</div><div class="t3 text-sm">${new Date(p.created_at).toLocaleString("es-MX")}</div></div></div>
-          <p style="margin-bottom:12px">${p.body}</p>
+        card.innerHTML = `<div class="row gap-3 mb-4"><div class="avatar avatar--md">${api.initials(p.profiles?.full_name)}</div><div><div class="fw-600">${api.esc(p.profiles?.full_name || "Coach")}</div><div class="t3 text-sm">${new Date(p.created_at).toLocaleString("es-MX")}</div></div></div>
+          <p style="margin-bottom:12px">${api.esc(p.body)}</p>
           <div class="row gap-3 mt-4"><button class="pill js-react ${liked ? "is-active" : ""}" data-post="${p.id}" data-liked="${liked}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1a5.5 5.5 0 0 0-7.8 7.8l9 9 9-9a5.5 5.5 0 0 0 0-7.8z"/></svg><span>${p.community_likes.length}</span></button><button class="pill">💬 ${p.community_comments.length}</button></div>`;
         headP.after(card);
       });
@@ -330,7 +352,7 @@
     if (!box) return;
     try {
       const msgs = await api.listMessages(PROFILE.coach_id, STUDENT.id);
-      box.innerHTML = msgs.map((m) => `<div style="align-self:${m.sender_id === PROFILE.id ? "flex-end" : "flex-start"};max-width:80%;background:${m.sender_id === PROFILE.id ? "var(--indigo)" : "var(--surface-3)"};color:${m.sender_id === PROFILE.id ? "#fff" : "inherit"};padding:10px 14px;border-radius:14px 14px ${m.sender_id === PROFILE.id ? "4px 14px" : "14px 4px"}">${m.body}</div>`).join("") || `<p class="t3 text-sm">Aún no hay mensajes con tu coach.</p>`;
+      box.innerHTML = msgs.map((m) => `<div style="align-self:${m.sender_id === PROFILE.id ? "flex-end" : "flex-start"};max-width:80%;background:${m.sender_id === PROFILE.id ? "var(--indigo)" : "var(--surface-3)"};color:${m.sender_id === PROFILE.id ? "#fff" : "inherit"};padding:10px 14px;border-radius:14px 14px ${m.sender_id === PROFILE.id ? "4px 14px" : "14px 4px"}">${api.esc(m.body)}</div>`).join("") || `<p class="t3 text-sm">Aún no hay mensajes con tu coach.</p>`;
       box.scrollTop = box.scrollHeight;
     } catch (ex) { errToast(ex, "No se pudieron cargar los mensajes"); }
   }

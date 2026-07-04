@@ -4,6 +4,9 @@ window.msfApi = (function () {
   "use strict";
   const sb = () => window.msfSupabase;
   const initials = (name) => (name || "?").trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() || "").join("");
+  // Escapa texto de usuario antes de interpolarlo en innerHTML (previene XSS almacenado).
+  const ESC_MAP = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+  const esc = (str) => String(str ?? "").replace(/[&<>"']/g, (c) => ESC_MAP[c]);
 
   /* ---------- Planes ---------- */
   const PLAN_LIMITS = { "Star": 30, "Star Plus": 100, "Kings": 500 };
@@ -371,7 +374,7 @@ window.msfApi = (function () {
   }
 
   return {
-    initials,
+    initials, esc,
     planLimit, planFeatures, countStudents,
     getReferralInfo,
     setAttendance, listAttendance, listCoachAttendance,

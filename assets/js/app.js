@@ -29,7 +29,7 @@
     const stack = $("#toastStack");
     const el = document.createElement("div");
     el.className = "toast toast--" + type;
-    el.innerHTML = `<span class="toast__ico">${icons[type]}</span><div><div class="toast__txt">${txt}</div>${sub ? `<div class="toast__sub">${sub}</div>` : ""}</div>`;
+    el.innerHTML = `<span class="toast__ico">${icons[type]}</span><div><div class="toast__txt">${api.esc(txt)}</div>${sub ? `<div class="toast__sub">${api.esc(sub)}</div>` : ""}</div>`;
     stack.appendChild(el);
     setTimeout(() => { el.classList.add("out"); setTimeout(() => el.remove(), 220); }, 2800);
   }
@@ -141,10 +141,10 @@
       const due = dueLabel(s);
       return `
       <tr data-student="${s.id}" style="cursor:pointer">
-        <td><div class="cell-user"><div class="avatar avatar--sm">${s.initials}</div><div><div class="cell-user__name">${s.full_name}</div><div class="cell-user__sub">${s.age ? s.age + " años" : "—"}</div></div></div></td>
+        <td><div class="cell-user"><div class="avatar avatar--sm">${s.initials}</div><div><div class="cell-user__name">${api.esc(s.full_name)}</div><div class="cell-user__sub">${s.age ? s.age + " años" : "—"}</div></div></div></td>
         <td><span class="badge ${badgeClass[s.state]}">${stateLabel[s.state]}</span></td>
-        <td>${s.training_type}</td>
-        <td class="muted">${s.goal || "—"}</td>
+        <td>${api.esc(s.training_type)}</td>
+        <td class="muted">${api.esc(s.goal || "—")}</td>
         <td><span style="color:var(--${due.tone === "t3" ? "text-3" : due.tone});font-family:var(--font-mono);font-size:13px">${due.text}</span></td>
         <td><div class="cell-actions">
           <button class="icon-btn js-msg-student" data-student="${s.id}" style="width:32px;height:32px" title="Mensaje"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v12H5.2L4 17.2V4z"/></svg></button>
@@ -158,10 +158,10 @@
       const due = dueLabel(s);
       return `
       <div class="card card--hover student-card" data-student="${s.id}" style="cursor:pointer">
-        <div class="student-card__head"><div class="avatar avatar--md">${s.initials}</div><div><div class="student-card__name">${s.full_name}</div><div class="student-card__sub">${s.age ? s.age + " años · " : ""}${s.training_type}</div></div></div>
+        <div class="student-card__head"><div class="avatar avatar--md">${s.initials}</div><div><div class="student-card__name">${api.esc(s.full_name)}</div><div class="student-card__sub">${s.age ? s.age + " años · " : ""}${api.esc(s.training_type)}</div></div></div>
         <div style="margin-bottom:12px"><span class="badge ${badgeClass[s.state]}">${stateLabel[s.state]}</span></div>
         <div class="student-card__rows">
-          <div class="kv"><span>Objetivo</span><span>${s.goal || "—"}</span></div>
+          <div class="kv"><span>Objetivo</span><span>${api.esc(s.goal || "—")}</span></div>
           <div class="kv"><span>Próximo pago</span><span style="color:var(--${due.tone === "t3" ? "text-2" : due.tone})">${due.text}</span></div>
         </div>
         <div class="student-card__foot"><button class="btn btn--ghost btn--sm js-msg-student" data-student="${s.id}" style="flex:1">Mensaje</button><button class="btn btn--primary btn--sm js-open-student" style="flex:1">Ver ficha</button></div>
@@ -182,8 +182,8 @@
     if (!tbody) return;
     tbody.innerHTML = PAYMENTS.map((p) => `
       <tr data-payment="${p.id}">
-        <td><div class="cell-user"><div class="avatar avatar--sm">${p.initials}</div><div class="cell-user__name">${p.student_name}</div></div></td>
-        <td class="muted">${p.concept}</td>
+        <td><div class="cell-user"><div class="avatar avatar--sm">${p.initials}</div><div class="cell-user__name">${api.esc(p.student_name)}</div></div></td>
+        <td class="muted">${api.esc(p.concept)}</td>
         <td class="mono" style="font-weight:600">$${Number(p.amount).toLocaleString("es-MX")}</td>
         <td>${new Date(p.due_date).toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}</td>
         <td><span class="badge ${badgeClass[p.state]}">${p.state === "ok" ? "Pagado" : stateLabel[p.state]}</span></td>
@@ -201,7 +201,7 @@
       const label = days < 0 ? `Atrasado ${-days}d` : days === 0 ? "Vence hoy" : `En ${days} días`;
       return `<div class="due-row">
         <div class="avatar avatar--sm">${p.initials}</div>
-        <div class="due-row__meta"><div class="due-row__name">${p.student_name}</div><div class="due-row__sub">${p.concept} · $${p.amount}</div></div>
+        <div class="due-row__meta"><div class="due-row__name">${api.esc(p.student_name)}</div><div class="due-row__sub">${api.esc(p.concept)} · $${p.amount}</div></div>
         <span class="due-row__days ${tone}">${label}</span>
         <button class="btn btn--lime btn--sm js-mark-paid" data-payment="${p.id}">Marcar pagado</button>
       </div>`;
@@ -214,7 +214,7 @@
     wrap.innerHTML = FOLLOW_UPS.map((f) => `
       <div class="alert-item ${f.is_done ? "is-done" : ""}" data-followup="${f.id}">
         <span class="check js-check ${f.is_done ? "is-done" : ""}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-        <div><div class="alert-item__txt">${f.title}</div><div class="alert-item__sub">${f.subtitle || (f.students ? f.students.full_name : "")}</div></div>
+        <div><div class="alert-item__txt">${api.esc(f.title)}</div><div class="alert-item__sub">${api.esc(f.subtitle || (f.students ? f.students.full_name : ""))}</div></div>
         <span class="alert-item__time">${new Date(f.due_at).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}</span>
       </div>`).join("") || `<p class="t3 text-sm">Sin seguimientos pendientes hoy.</p>`;
   }
@@ -273,7 +273,7 @@
     const dwPayments = $("#dwPayments");
     if (dwPayments) {
       const rows = PAYMENTS.filter((p) => p.student_id === id);
-      dwPayments.innerHTML = rows.map((p) => `<div class="due-row"><div class="due-row__meta"><div class="due-row__name">${p.concept}</div><div class="due-row__sub">${p.state === "ok" ? "Pagado" : new Date(p.due_date).toLocaleDateString("es-MX")}</div></div><span class="mono">$${p.amount}</span><span class="badge ${badgeClass[p.state]}">${p.state === "ok" ? "Pagado" : stateLabel[p.state]}</span></div>`).join("") || `<p class="t3 text-sm">Sin pagos registrados.</p>`;
+      dwPayments.innerHTML = rows.map((p) => `<div class="due-row"><div class="due-row__meta"><div class="due-row__name">${api.esc(p.concept)}</div><div class="due-row__sub">${p.state === "ok" ? "Pagado" : new Date(p.due_date).toLocaleDateString("es-MX")}</div></div><span class="mono">$${p.amount}</span><span class="badge ${badgeClass[p.state]}">${p.state === "ok" ? "Pagado" : stateLabel[p.state]}</span></div>`).join("") || `<p class="t3 text-sm">Sin pagos registrados.</p>`;
     }
 
     // Seguimientos del alumno (reales)
@@ -283,7 +283,7 @@
       dwFu.innerHTML = fus.map((f) => `
         <div class="alert-item ${f.is_done ? "is-done" : ""}" data-followup="${f.id}">
           <span class="check js-check ${f.is_done ? "is-done" : ""}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-          <div><div class="alert-item__txt">${f.title}</div><div class="alert-item__sub">${f.is_done ? "Completado" : new Date(f.due_at).toLocaleDateString("es-MX")}</div></div>
+          <div><div class="alert-item__txt">${api.esc(f.title)}</div><div class="alert-item__sub">${f.is_done ? "Completado" : new Date(f.due_at).toLocaleDateString("es-MX")}</div></div>
         </div>`).join("") || `<p class="t3 text-sm">Sin seguimientos para este alumno.</p>`;
     }
 
@@ -307,8 +307,8 @@
         return;
       }
       const dayLabels = { lunes: "Lunes", martes: "Martes", miercoles: "Miércoles", jueves: "Jueves", viernes: "Viernes", sabado: "Sábado", domingo: "Domingo" };
-      box.innerHTML = `<div class="section-title">${routine.name || "Rutina"} · ${routine.phase || ""} · Semana ${routine.week || 1}</div>` +
-        routine.days.map((d) => `<div class="kv mb-2"><span>${dayLabels[d.day_name] || d.day_name}</span><span>${d.label || "Día"} · ${(d.exercises || []).length} ejercicios</span></div>`).join("");
+      box.innerHTML = `<div class="section-title">${api.esc(routine.name || "Rutina")} · ${api.esc(routine.phase || "")} · Semana ${routine.week || 1}</div>` +
+        routine.days.map((d) => `<div class="kv mb-2"><span>${api.esc(dayLabels[d.day_name] || d.day_name)}</span><span>${api.esc(d.label || "Día")} · ${(d.exercises || []).length} ejercicios</span></div>`).join("");
     } catch (ex) { box.innerHTML = `<p class="t3 text-sm">No se pudo cargar la rutina.</p>`; }
   }
 
@@ -323,7 +323,7 @@
       const last = photos[photos.length - 1];
       const cell = (p, label) => `<div class="compare__ph"><span>${label} · ${new Date(p.taken_at).toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}</span><img src="${p.url}" style="width:100%;height:100%;object-fit:cover" alt="${label}"></div>`;
       compare.innerHTML = photos.length === 1 ? cell(first, "Última") : cell(first, "Primera") + cell(last, "Última");
-    } catch (ex) { /* silencioso */ }
+    } catch (ex) { console.error("No se pudieron cargar las fotos de progreso:", ex); }
   }
 
   /* ---------- Editar datos del alumno (desde la ficha) ---------- */
@@ -533,7 +533,7 @@
   function fillStudentSelect(sel, { includeEmpty = false, emptyLabel = "" } = {}) {
     if (!sel) return;
     const opts = (includeEmpty ? `<option value="">${emptyLabel}</option>` : "") +
-      STUDENTS.map((s) => `<option value="${s.id}">${s.full_name}</option>`).join("");
+      STUDENTS.map((s) => `<option value="${s.id}">${api.esc(s.full_name)}</option>`).join("");
     const prev = sel.value;
     sel.innerHTML = opts;
     if (prev) sel.value = prev;
@@ -684,7 +684,7 @@
         const existing = routine.days.find((x) => x.day_name === d);
         const exercises = existing?.exercises || [];
         return `<div class="day-col" data-day="${d}">
-          <div class="day-col__head"><span class="day-col__title">${dayLabels[d]}</span><span class="day-col__count">${existing?.label || "Día"} · ${exercises.length}</span></div>
+          <div class="day-col__head"><span class="day-col__title">${dayLabels[d]}</span><span class="day-col__count">${api.esc(existing?.label || "Día")} · ${exercises.length}</span></div>
           ${exercises.map((ex) => exerciseCardHTML(ex)).join("")}
           <div class="day-add">+ Añadir ejercicio</div>
         </div>`;
@@ -746,7 +746,7 @@
     </select>`;
   }
   function exerciseCardHTML(ex = {}) {
-    return `<div class="ex-card" draggable="true"><div class="ex-card__name" contenteditable="true">${ex.name || "Nuevo ejercicio"}</div><div class="ex-card__grid"><div class="ex-input"><label>Series</label><input value="${ex.sets ?? ""}" data-field="sets"></div><div class="ex-input"><label>Reps</label><input value="${ex.reps ?? ""}" data-field="reps"></div><div class="ex-input"><label>Kg</label><input value="${ex.kg ?? ""}" data-field="kg"></div><div class="ex-input"><label>Desc</label><input value="${ex.rest_seconds ?? ""}" data-field="rest_seconds"></div></div>${muscleSelectHTML(ex.muscle_group)}</div>`;
+    return `<div class="ex-card" draggable="true"><div class="ex-card__name" contenteditable="true">${api.esc(ex.name || "Nuevo ejercicio")}</div><div class="ex-card__grid"><div class="ex-input"><label>Series</label><input value="${ex.sets ?? ""}" data-field="sets"></div><div class="ex-input"><label>Reps</label><input value="${ex.reps ?? ""}" data-field="reps"></div><div class="ex-input"><label>Kg</label><input value="${ex.kg ?? ""}" data-field="kg"></div><div class="ex-input"><label>Desc</label><input value="${ex.rest_seconds ?? ""}" data-field="rest_seconds"></div></div>${muscleSelectHTML(ex.muscle_group)}</div>`;
   }
   function addExercise(col, ex = {}) {
     const tmp = document.createElement("div");
@@ -818,7 +818,7 @@
     if (!sel) return;
     const prev = sel.value;
     sel.innerHTML = `<option value="">Selecciona un alumno…</option>` +
-      STUDENTS.map((s) => `<option value="${s.id}">${s.full_name}</option>`).join("");
+      STUDENTS.map((s) => `<option value="${s.id}">${api.esc(s.full_name)}</option>`).join("");
     if (prev) sel.value = prev;
   }
   $("#routineStudentSelect")?.addEventListener("change", (e) => {
@@ -853,8 +853,8 @@
       feed.innerHTML = posts.map((p) => {
         const liked = p.community_likes.some((l) => l.profile_id === PROFILE.id);
         return `<div class="card mb-4" data-post="${p.id}">
-          <div class="row gap-3 mb-4"><div class="avatar avatar--md">${api.initials(p.profiles?.full_name)}</div><div><div class="fw-600">${p.profiles?.full_name || "Coach"}</div><div class="t3 text-sm">${new Date(p.created_at).toLocaleString("es-MX")}</div></div></div>
-          <p style="margin-bottom:12px">${p.body}</p>
+          <div class="row gap-3 mb-4"><div class="avatar avatar--md">${api.initials(p.profiles?.full_name)}</div><div><div class="fw-600">${api.esc(p.profiles?.full_name || "Coach")}</div><div class="t3 text-sm">${new Date(p.created_at).toLocaleString("es-MX")}</div></div></div>
+          <p style="margin-bottom:12px">${api.esc(p.body)}</p>
           <div class="row gap-4 mt-4">
             <button class="pill js-like ${liked ? "is-active" : ""}" data-post="${p.id}" data-liked="${liked}">❤ ${p.community_likes.length}</button>
             <button class="pill">💬 ${p.community_comments.length} comentarios</button>
@@ -891,7 +891,7 @@
     if (!list) return;
     try {
       const convos = await api.listConversations(PROFILE.id);
-      list.innerHTML = convos.map((c) => `<div class="alert-item radius-0 js-conversation" data-student="${c.id}" style="cursor:pointer"><div class="avatar avatar--md">${api.initials(c.full_name)}</div><div><div class="alert-item__txt">${c.full_name}</div></div></div>`).join("") || `<p class="t3 text-sm" style="padding:16px">Sin conversaciones aún.</p>`;
+      list.innerHTML = convos.map((c) => `<div class="alert-item radius-0 js-conversation" data-student="${c.id}" style="cursor:pointer"><div class="avatar avatar--md">${api.initials(c.full_name)}</div><div><div class="alert-item__txt">${api.esc(c.full_name)}</div></div></div>`).join("") || `<p class="t3 text-sm" style="padding:16px">Sin conversaciones aún.</p>`;
       if (convos.length && !activeConversationId) selectConversation(convos[0].id);
     } catch (ex) { errToast(ex, "No se pudieron cargar los mensajes"); }
   }
@@ -904,7 +904,7 @@
     if (!body) return;
     try {
       const msgs = await api.listMessages(PROFILE.id, studentId);
-      body.innerHTML = msgs.map((m) => `<div style="align-self:${m.sender_id === PROFILE.id ? "flex-end" : "flex-start"};max-width:70%;background:${m.sender_id === PROFILE.id ? "var(--indigo)" : "var(--surface-3)"};color:${m.sender_id === PROFILE.id ? "#fff" : "inherit"};padding:10px 14px;border-radius:14px 14px ${m.sender_id === PROFILE.id ? "4px 14px" : "14px 4px"}">${m.body}</div>`).join("") || `<p class="t3 text-sm">Aún no hay mensajes en esta conversación.</p>`;
+      body.innerHTML = msgs.map((m) => `<div style="align-self:${m.sender_id === PROFILE.id ? "flex-end" : "flex-start"};max-width:70%;background:${m.sender_id === PROFILE.id ? "var(--indigo)" : "var(--surface-3)"};color:${m.sender_id === PROFILE.id ? "#fff" : "inherit"};padding:10px 14px;border-radius:14px 14px ${m.sender_id === PROFILE.id ? "4px 14px" : "14px 4px"}">${api.esc(m.body)}</div>`).join("") || `<p class="t3 text-sm">Aún no hay mensajes en esta conversación.</p>`;
       body.scrollTop = body.scrollHeight;
     } catch (ex) { errToast(ex, "No se pudieron cargar los mensajes"); }
   }
@@ -965,7 +965,7 @@
     list.innerHTML = items.map((i) => `
       <button class="notif-item ${read.has(i.id) ? "" : "is-unread"}" data-notif-nav="${i.nav}">
         <span class="notif-item__ico notif-item__ico--${i.tone}">${i.icon}</span>
-        <span class="notif-item__body"><span class="notif-item__txt">${i.text}</span><span class="notif-item__sub">${i.sub}</span></span>
+        <span class="notif-item__body"><span class="notif-item__txt">${api.esc(i.text)}</span><span class="notif-item__sub">${api.esc(i.sub)}</span></span>
       </button>`).join("") || `<p class="t3 text-sm" style="padding:16px;text-align:center">Todo al día 🎉</p>`;
   }
   $("#notifBtn")?.addEventListener("click", (e) => {
@@ -1001,16 +1001,63 @@
       requestAnimationFrame(tick);
     });
   }
+  /* Delta real de un KPI: texto + dirección (up/down) calculados de los datos */
+  function setKpiDelta(kpiEl, text, dir) {
+    const delta = kpiEl?.querySelector(".kpi__delta");
+    if (!delta) return;
+    const arrow = dir === "down"
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>';
+    delta.className = "kpi__delta " + (dir === "down" ? "down" : "up");
+    delta.innerHTML = arrow + api.esc(text);
+  }
+  /* Sparkline con la serie real (o se oculta si no hay historia que mostrar) */
+  function setKpiSpark(kpiEl, values) {
+    const spark = kpiEl?.querySelector(".kpi__spark polyline");
+    if (!spark) return;
+    if (!values || values.length < 2 || values.every((v) => v === values[0])) {
+      spark.closest("svg").style.visibility = "hidden";
+      return;
+    }
+    spark.closest("svg").style.visibility = "";
+    const max = Math.max(...values), min = Math.min(...values);
+    const pts = values.map((v, i) => {
+      const x = Math.round((i / (values.length - 1)) * 100);
+      const y = Math.round(26 - ((v - min) / (max - min || 1)) * 22);
+      return x + "," + y;
+    });
+    spark.setAttribute("points", pts.join(" "));
+  }
   function updateKpis() {
     const fin = api.financeKpis(PAYMENTS);
     const active = STUDENTS.filter((s) => s.state === "ok").length;
-    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const newThisMonth = STUDENTS.filter((s) => s.created_at && new Date(s.created_at) >= monthStart).length;
+    const newPrevMonth = STUDENTS.filter((s) => s.created_at && new Date(s.created_at) >= prevMonthStart && new Date(s.created_at) < monthStart).length;
+    const kpiEls = $$("#view-dashboard .kpi");
     const kpis = $$("#view-dashboard .kpi__value[data-count]");
     if (kpis[0]) kpis[0].dataset.count = fin.collectedMonth;
     if (kpis[1]) kpis[1].dataset.count = active;
     if (kpis[2]) kpis[2].dataset.count = newThisMonth;
     if (kpis[3]) kpis[3].dataset.count = fin.pendingCount;
+
+    // Deltas y sparklines con datos reales (nada de números decorativos)
+    const monthly = fin.monthly.map((m) => m.total);
+    const prevRev = monthly[monthly.length - 2] || 0;
+    const curRev = monthly[monthly.length - 1] || 0;
+    const revPct = prevRev > 0 ? Math.round(((curRev - prevRev) / prevRev) * 100) : null;
+    setKpiDelta(kpiEls[0], revPct === null ? "vs mes anterior: —" : `${Math.abs(revPct)}% vs mes anterior`, revPct !== null && revPct < 0 ? "down" : "up");
+    setKpiSpark(kpiEls[0], monthly);
+    setKpiDelta(kpiEls[1], `+${newThisMonth} este mes`, "up");
+    setKpiSpark(kpiEls[1], null);
+    const newDiff = newThisMonth - newPrevMonth;
+    setKpiDelta(kpiEls[2], `${newDiff >= 0 ? "+" : ""}${newDiff} vs mes anterior`, newDiff < 0 ? "down" : "up");
+    setKpiSpark(kpiEls[2], null);
+    const lateCount = PAYMENTS.filter((p) => p.state === "late" || (p.state !== "ok" && new Date(p.due_date) < now)).length;
+    setKpiDelta(kpiEls[3], `${lateCount} atrasados`, lateCount > 0 ? "down" : "up");
+    setKpiSpark(kpiEls[3], null);
     renderFinance(fin);
   }
 
@@ -1086,7 +1133,7 @@
         list.innerHTML = info.referrals.map((r) => `
           <div class="due-row">
             <div class="avatar avatar--sm">${api.initials(r.referred?.full_name)}</div>
-            <div class="due-row__meta"><div class="due-row__name">${r.referred?.full_name || "Coach"}</div><div class="due-row__sub">${r.referred?.email || ""}</div></div>
+            <div class="due-row__meta"><div class="due-row__name">${api.esc(r.referred?.full_name || "Coach")}</div><div class="due-row__sub">${api.esc(r.referred?.email || "")}</div></div>
             <span class="t3 text-sm">${new Date(r.created_at).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}</span>
           </div>`).join("");
       }
@@ -1126,7 +1173,7 @@
             : '<span class="badge badge--late">No va</span>';
         return `<div class="due-row">
           <div class="avatar avatar--sm">${s.initials}</div>
-          <div class="due-row__meta"><div class="due-row__name">${s.full_name}</div><div class="due-row__sub">${r && !r.attending && r.reason ? "Motivo: " + r.reason : (r?.reason || "")}</div></div>
+          <div class="due-row__meta"><div class="due-row__name">${api.esc(s.full_name)}</div><div class="due-row__sub">${api.esc(r && !r.attending && r.reason ? "Motivo: " + r.reason : (r?.reason || ""))}</div></div>
           ${badge}
         </div>`;
       }).join("");
