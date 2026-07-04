@@ -450,6 +450,98 @@
   }
 
   /* ---------- Init ---------- */
+  /* ---------- Onboarding de objetivos (una sola vez) ---------- */
+  function maybeShowOnboarding() {
+    if (!STUDENT || STUDENT.onboarding_completed_at) return;
+    const overlay = $("#onboarding");
+    if (!overlay) return;
+
+    const answers = {};
+    let step = 1;
+    const TOTAL = 7;
+    const stepEl = (n) => overlay.querySelector(`.ob-step[data-step="${n}"]`);
+    const bar = $("#obBar"), stepNum = $("#obStepNum"),
+          backBtn = $("#obBack"), nextBtn = $("#obNext"), errEl = $("#obError");
+
+    // Prellena con lo que el coach ya tenga cargado
+    if (STUDENT.weight_current != null) $("#obWeightCurrent").value = STUDENT.weight_current;
+    if (STUDENT.weight_goal != null) $("#obWeightGoal").value = STUDENT.weight_goal;
+
+    // Selección en tarjetas / botones de opción única
+    overlay.querySelectorAll("[data-single]").forEach((group) => {
+      const field = group.getAttribute("data-field");
+      group.querySelectorAll("[data-value]").forEach((opt) => {
+        opt.addEventListener("click", () => {
+          group.querySelectorAll("[data-value]").forEach((o) => o.classList.remove("sel"));
+          opt.classList.add("sel");
+          answers[field] = opt.getAttribute("data-value");
+          errEl.style.display = "none";
+        });
+      });
+    });
+
+    function render() {
+      overlay.querySelectorAll(".ob-step").forEach((s) => s.classList.remove("active"));
+      stepEl(step).classList.add("active");
+      bar.style.width = Math.round((step / TOTAL) * 100) + "%";
+      stepNum.textContent = step;
+      backBtn.style.display = step === 1 ? "none" : "";
+      nextBtn.textContent = step === TOTAL ? "Terminar 🚀" : "Siguiente";
+      errEl.style.display = "none";
+    }
+    function fail(msg) { errEl.textContent = msg; errEl.style.display = "block"; return false; }
+    function validate() {
+      if (step === 1 && !answers.goal) return fail("Elige tu objetivo principal.");
+      if (step === 2) {
+        const v = parseFloat($("#obWeightCurrent").value);
+        if (!(v >= 20 && v <= 400)) return fail("Escribe un peso válido (kg).");
+      }
+      if (step === 3) {
+        const v = parseFloat($("#obWeightGoal").value);
+        if (!(v >= 20 && v <= 400)) return fail("Escribe tu peso objetivo (kg).");
+      }
+      if (step === 4 && !answers.experience_level) return fail("Elige tu nivel de experiencia.");
+      if (step === 5 && !answers.training_frequency) return fail("Elige cuántos días quieres entrenar.");
+      // pasos 6 y 7 son opcionales
+      return true;
+    }
+    async function finish() {
+      nextBtn.disabled = true; nextBtn.textContent = "Guardando…";
+      try {
+        await api.saveOnboarding({
+          goal: answers.goal,
+          weight_current: parseFloat($("#obWeightCurrent").value),
+          weight_goal: parseFloat($("#obWeightGoal").value),
+          experience: answers.experience_level,
+          frequency: parseInt(answers.training_frequency, 10),
+          injuries: $("#obInjuries").value.trim(),
+          target_date: $("#obTargetDate").value || null,
+          motivation: $("#obMotivation").value.trim(),
+        });
+        STUDENT.onboarding_completed_at = new Date().toISOString();
+        STUDENT.goal = answers.goal;
+        STUDENT.weight_current = parseFloat($("#obWeightCurrent").value);
+        STUDENT.weight_goal = parseFloat($("#obWeightGoal").value);
+        overlay.classList.add("hidden");
+        paintHome();
+        toast("¡Listo! Tu coach ya tiene tus objetivos 🎯", "ok");
+      } catch (ex) {
+        nextBtn.disabled = false; nextBtn.textContent = "Terminar 🚀";
+        errToast(ex, "No se pudo guardar. Inténtalo de nuevo.");
+      }
+    }
+
+    nextBtn.addEventListener("click", () => {
+      if (!validate()) return;
+      if (step === TOTAL) { finish(); return; }
+      step++; render();
+    });
+    backBtn.addEventListener("click", () => { if (step > 1) { step--; render(); } });
+
+    overlay.classList.remove("hidden");
+    render();
+  }
+
   async function init() {
     const auth = await window.msfAuth.requireRole("alumno");
     if (!auth) return;
@@ -477,6 +569,7 @@
       }
     } catch (ex) { console.error("No se pudo cargar el perfil del coach:", ex); }
 
+    maybeShowOnboarding();
     paintHome();
     animateRing();
     loadAttendance();

@@ -323,6 +323,20 @@ window.msfApi = (function () {
     const { error } = await sb().rpc("reset_attendance_day");
     if (error) throw error;
   }
+  // Guarda el onboarding del alumno (una sola vez) vía RPC segura.
+  async function saveOnboarding(a) {
+    const { error } = await sb().rpc("save_onboarding", {
+      p_goal: a.goal,
+      p_weight_current: a.weight_current ?? null,
+      p_weight_goal: a.weight_goal ?? null,
+      p_experience: a.experience ?? null,
+      p_frequency: a.frequency ?? null,
+      p_injuries: a.injuries ?? null,
+      p_target_date: a.target_date ?? null,
+      p_motivation: a.motivation ?? null,
+    });
+    if (error) throw error;
+  }
   // Fechas confirmadas por el alumno (para racha/entrenos), desde `fromDate`.
   async function listMyAttendance(studentId, fromDate) {
     let q = sb().from("attendance").select("attend_date")
@@ -420,6 +434,7 @@ window.msfApi = (function () {
     planLimit, planFeatures, countStudents,
     getReferralInfo,
     confirmAttendance, cancelAttendance, myAttendance, listCoachAttendance, resetAttendanceDay, listMyAttendance,
+    saveOnboarding,
     financeKpis,
     listStudents, createStudent, createStudentFull, updateStudent, deleteStudent,
     listPayments, markPaymentPaid, createPayment,
