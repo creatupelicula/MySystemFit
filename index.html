@@ -62,9 +62,9 @@
 
     <div class="sidebar__foot">
       <div class="coach-card">
-        <div class="avatar avatar--md">DM</div>
+        <div class="avatar avatar--md"></div>
         <div class="coach-card__meta">
-          <div class="coach-card__name">Diego Morales</div>
+          <div class="coach-card__name"></div>
           <div class="coach-card__plan"><span class="badge badge--star" style="height:18px;padding:0 8px;font-size:10px">★ Star Plus</span></div>
         </div>
       </div>
@@ -77,7 +77,7 @@
       <button class="icon-btn menu-toggle" id="menuToggle" aria-label="Menú">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
-      <div class="topbar__title" id="pageTitle">Dashboard<small id="pageSub">Buenas tardes, Diego 👋</small></div>
+      <div class="topbar__title" id="pageTitle">Dashboard<small id="pageSub"></small></div>
       <div class="topbar__spacer"></div>
       <div class="search">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -100,7 +100,7 @@
           <div class="notif-panel__body" id="notifList"></div>
         </div>
       </div>
-      <div class="avatar avatar--md avatar--ring">DM</div>
+      <div class="avatar avatar--md avatar--ring"></div>
     </header>
 
     <div class="content">
@@ -302,7 +302,7 @@
         <div style="max-width:620px;margin:0 auto">
           <form id="formNewPost" class="card mb-4">
             <div class="row gap-3">
-              <div class="avatar avatar--md">DM</div>
+              <div class="avatar avatar--md"></div>
               <input class="input" id="newPostBody" placeholder="Comparte algo con tu comunidad…" style="height:44px">
               <button type="submit" class="btn btn--primary btn--sm">Publicar</button>
             </div>
@@ -352,7 +352,7 @@
         <div class="grid-2">
           <div class="card">
             <div class="section-title">Perfil del coach</div>
-            <div class="row gap-4 mb-4"><div class="avatar avatar--xl">DM</div><div><p class="t3 text-sm">Tu ID de coach (compártelo con tus alumnos para que se registren):</p><p class="mono text-sm" id="coachIdDisplay" style="word-break:break-all"></p></div></div>
+            <div class="row gap-4 mb-4"><div class="avatar avatar--xl"></div><div><p class="t3 text-sm">Tu ID de coach (compártelo con tus alumnos para que se registren):</p><p class="mono text-sm" id="coachIdDisplay" style="word-break:break-all"></p></div></div>
             <form id="formProfile">
               <div class="field"><label>Nombre</label><input class="input" id="profName"></div>
               <div class="field"><label>Email</label><input class="input" id="profEmail" disabled></div>
@@ -403,7 +403,7 @@
     <div class="drawer__id">
       <div class="avatar avatar--lg" id="dwAvatar">LM</div>
       <div>
-        <div class="drawer__name" id="dwName">Laura Méndez</div>
+        <div class="drawer__name" id="dwName"></div>
         <div class="drawer__tags">
           <span class="badge badge--ok" id="dwState">Activa</span>
           <span class="badge badge--plan">28 años</span>
@@ -493,19 +493,19 @@
     <p>Crea la cuenta del alumno y su membresía. Se sincroniza con Pagos, Mensajes y Rutinas.</p>
     <form id="formNewStudent">
       <div class="form-grid">
-        <div class="field"><label>Nombre completo *</label><input class="input" id="nsName" required placeholder="Ej. Laura Méndez"></div>
-        <div class="field"><label>Celular</label><input class="input" id="nsPhone" placeholder="+52 55 1234 5678"></div>
-        <div class="field"><label>Correo (será su usuario)</label><input class="input" type="email" id="nsEmail" placeholder="alumno@correo.com"></div>
-        <div class="field"><label>Contraseña de acceso</label><input class="input" type="text" id="nsPassword" placeholder="mín. 6 caracteres" minlength="6"></div>
-        <div class="field"><label>Tipo</label><select class="select" id="nsType"><option>Online</option><option>Presencial</option></select></div>
-        <div class="field"><label>Objetivo</label><select class="select" id="nsGoal"><option>Pérdida de grasa</option><option>Hipertrofia</option><option>Recomposición</option><option>Mantenimiento</option><option>Fuerza</option></select></div>
-        <div class="field"><label>Peso actual (kg)</label><input class="input" type="number" step="0.1" id="nsWeight" placeholder="70"></div>
-        <div class="field"><label>Peso objetivo (kg)</label><input class="input" type="number" step="0.1" id="nsWeightGoal" placeholder="65"></div>
-        <div class="field"><label>Inicio de membresía</label><input class="input" type="date" id="nsStart"></div>
-        <div class="field"><label>Fin de membresía</label><input class="input" type="date" id="nsEnd"></div>
-        <div class="field"><label>Monto de pago ($)</label><input class="input" type="number" step="0.01" id="nsAmount" placeholder="85"></div>
-        <div class="field"><label>Estado de pago</label><select class="select" id="nsPayState"><option value="pend">Pendiente</option><option value="ok">Pagado</option></select></div>
-        <div class="field field--full"><label>Notas privadas</label><textarea class="input textarea" id="nsNotes" placeholder="Lesiones, preferencias, observaciones…"></textarea></div>
+        <div class="field"><label for="nsName">Nombre completo *</label><input class="input" id="nsName" required placeholder="Ej. Laura Méndez"></div>
+        <div class="field"><label for="nsPhone">Celular</label><input class="input" id="nsPhone" placeholder="+52 55 1234 5678"></div>
+        <div class="field"><label for="nsEmail">Correo (será su usuario)</label><input class="input" type="email" id="nsEmail" placeholder="alumno@correo.com"></div>
+        <div class="field"><label for="nsPassword">Contraseña de acceso</label><input class="input" type="text" id="nsPassword" placeholder="mín. 6 caracteres" minlength="6"></div>
+        <div class="field"><label for="nsType">Tipo</label><select class="select" id="nsType"><option>Online</option><option>Presencial</option></select></div>
+        <div class="field"><label for="nsGoal">Objetivo</label><select class="select" id="nsGoal"><option>Pérdida de grasa</option><option>Hipertrofia</option><option>Recomposición</option><option>Mantenimiento</option><option>Fuerza</option></select></div>
+        <div class="field"><label for="nsWeight">Peso actual (kg)</label><input class="input" type="number" step="0.1" id="nsWeight" placeholder="70"></div>
+        <div class="field"><label for="nsWeightGoal">Peso objetivo (kg)</label><input class="input" type="number" step="0.1" id="nsWeightGoal" placeholder="65"></div>
+        <div class="field"><label for="nsStart">Inicio de membresía</label><input class="input" type="date" id="nsStart"></div>
+        <div class="field"><label for="nsEnd">Fin de membresía</label><input class="input" type="date" id="nsEnd"></div>
+        <div class="field"><label for="nsAmount">Monto de pago ($)</label><input class="input" type="number" step="0.01" id="nsAmount" placeholder="85"></div>
+        <div class="field"><label for="nsPayState">Estado de pago</label><select class="select" id="nsPayState"><option value="pend">Pendiente</option><option value="ok">Pagado</option></select></div>
+        <div class="field field--full"><label for="nsNotes">Notas privadas</label><textarea class="input textarea" id="nsNotes" placeholder="Lesiones, preferencias, observaciones…"></textarea></div>
       </div>
       <div class="modal__actions"><button type="button" class="btn btn--ghost js-modal-close">Cancelar</button><button type="submit" class="btn btn--primary" id="nsSubmit">Crear alumno</button></div>
     </form>

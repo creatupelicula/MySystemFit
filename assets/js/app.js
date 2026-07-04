@@ -425,7 +425,9 @@
       return errToast({ message: "La contraseña debe tener al menos 6 caracteres." }, "Falta la contraseña");
     }
     const btn = $("#nsSubmit");
+    const btnLabel = btn.textContent;
     btn.disabled = true;
+    btn.textContent = "Guardando…";
     const num = (v) => (v === "" || v == null ? null : Number(v));
 
     // ----- Modo edición: actualiza la ficha existente (sin auth ni cobro) -----
@@ -450,7 +452,7 @@
         EDIT_STUDENT_ID = null;
         toast("Alumno actualizado", name, "ok");
       } catch (ex) { errToast(ex, "No se pudo actualizar el alumno"); }
-      finally { btn.disabled = false; }
+      finally { btn.disabled = false; btn.textContent = btnLabel; }
       return;
     }
     try {
@@ -481,7 +483,7 @@
       if (ex._planLimit) toast("Límite del plan alcanzado", ex.message, "err");
       else if (ex._authOnly) errToast(ex, "No se pudo crear la cuenta de acceso (¿correo ya usado?)");
       else errToast(ex, "No se pudo crear el alumno");
-    } finally { btn.disabled = false; }
+    } finally { btn.disabled = false; btn.textContent = btnLabel; }
   });
 
   /* ---------- Registrar pago (persistido) ---------- */

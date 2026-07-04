@@ -208,6 +208,57 @@
     if (memType) memType.textContent = `Plan ${STUDENT.training_type === "Presencial" ? "presencial" : "online"}`;
   }
 
+  /* ---------- Renovación: pago pendiente real (si existe) ---------- */
+  async function loadPendingPayment() {
+    const btn = $("#renewBtn");
+    if (!btn || !STUDENT) return;
+    try {
+      const { data, error } = await window.msfSupabase
+        .from("payments").select("amount, due_date")
+        .eq("student_id", STUDENT.id).neq("state", "ok")
+        .order("due_date").limit(1);
+      if (error) throw error;
+      if (data?.length) {
+        btn.textContent = `Pago pendiente · $${Number(data[0].amount).toLocaleString("es-MX")} — Hablar con tu coach`;
+        btn.classList.remove("hidden");
+        btn.onclick = () => anav("chat");
+      }
+    } catch (ex) { console.error("No se pudo consultar el pago pendiente:", ex); }
+  }
+
+  /* ---------- Estadísticas reales de la semana ---------- */
+  async function loadWeekStats() {
+    if (!STUDENT) return;
+    const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+    // Entrenos y racha: solo hay registro de asistencia para presenciales
+    if (STUDENT.training_type === "Presencial") {
+      try {
+        const rows = await api.listAttendance(STUDENT.id, new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10), todayStr());
+        const attended = rows.filter((r) => r.attending);
+        const thisWeek = attended.filter((r) => r.date >= weekAgo).length;
+        $("#wkTrainings") && ($("#wkTrainings").textContent = thisWeek);
+        // Racha: días consecutivos con asistencia, contando hacia atrás desde hoy/ayer
+        const days = new Set(attended.map((r) => r.date));
+        let streak = 0;
+        let cursor = new Date();
+        if (!days.has(todayStr())) cursor = new Date(Date.now() - 86400000);
+        while (days.has(cursor.toISOString().slice(0, 10))) { streak++; cursor = new Date(cursor.getTime() - 86400000); }
+        $("#wkStreak") && ($("#wkStreak").textContent = streak > 0 ? `🔥 ${streak}` : "0");
+      } catch (ex) { console.error("No se pudieron cargar las estadísticas de asistencia:", ex); }
+    }
+    // Delta de peso de los últimos 7 días (con lo que haya registrado)
+    try {
+      const logs = await api.listWeightLogs(STUDENT.id);
+      const recent = logs.filter((l) => l.logged_at >= weekAgo);
+      if (recent.length >= 2) {
+        const delta = (Number(recent[recent.length - 1].weight) - Number(recent[0].weight)).toFixed(1);
+        $("#wkWeight") && ($("#wkWeight").textContent = `${delta > 0 ? "+" : ""}${delta}`);
+      } else if (logs.length) {
+        $("#wkWeight") && ($("#wkWeight").textContent = "0");
+      }
+    } catch (ex) { console.error("No se pudo calcular el delta de peso semanal:", ex); }
+  }
+
   /* ---------- Asistencia diaria (solo alumnos presenciales) ---------- */
   const todayStr = () => new Date().toISOString().slice(0, 10);
   async function loadAttendance() {
@@ -396,11 +447,25 @@
       .maybeSingle();
     if (!error && student) STUDENT = student;
 
+    // Perfil del coach: nombre real en el chat + gating de comunidad según su plan
+    try {
+      const { data: coach } = await window.msfSupabase
+        .from("profiles").select("full_name, plan").eq("id", PROFILE.coach_id).maybeSingle();
+      if (coach) {
+        $("#chatCoachName") && ($("#chatCoachName").textContent = coach.full_name);
+        if (!api.planFeatures(coach.plan).community) {
+          $$('[data-anav="comunidad"]').forEach((b) => b.remove());
+        }
+      }
+    } catch (ex) { console.error("No se pudo cargar el perfil del coach:", ex); }
+
     paintHome();
     animateRing();
     loadAttendance();
     loadRoutine();
     loadWeightHistory();
+    loadPendingPayment();
+    loadWeekStats();
     renderPhotoTimeline();
     subscribeRealtime();
   }

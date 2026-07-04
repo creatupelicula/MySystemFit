@@ -20,9 +20,9 @@
     <div class="avatar avatar--md avatar--ring">LM</div>
     <div class="flex-1">
       <div class="a-top__hi">Hola de nuevo,</div>
-      <div class="a-top__name">Laura 👋</div>
+      <div class="a-top__name"></div>
     </div>
-    <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="icon-btn__dot">1</span></button>
+    <button class="icon-btn" data-anav="chat" aria-label="Mensajes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="icon-btn__dot hidden" id="aNotifDot">0</span></button>
   </header>
 
   <div class="a-body">
@@ -63,7 +63,7 @@
           </div>
           <span class="badge badge--pend">Vence en 3 días</span>
         </div>
-        <button class="btn btn--lime btn--block mt-4">Renovar ahora · $85</button>
+        <button class="btn btn--lime btn--block mt-4 hidden" id="renewBtn"></button>
       </div>
 
       <!-- Asistencia de hoy (solo presencial) -->
@@ -83,21 +83,21 @@
       <!-- CTA rutina de hoy -->
       <button class="card card--hover mt-4" style="width:100%;text-align:left;display:flex;align-items:center;gap:16px;cursor:pointer" data-anav="rutina">
         <div class="kpi__ico" style="width:48px;height:48px;background:var(--indigo-soft);color:var(--indigo-hi)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6.5 6.5h11M6.5 17.5h11M4 9v6M20 9v6M2 10.5v3M22 10.5v3"/></svg></div>
-        <div class="flex-1"><div style="font-weight:700;font-size:16px">Rutina de hoy</div><div class="t3 text-sm">Full body A · 5 ejercicios · ~50 min</div></div>
+        <div class="flex-1"><div style="font-weight:700;font-size:16px">Rutina de hoy</div><div class="t3 text-sm">Toca para ver tu rutina</div></div>
         <svg viewBox="0 0 24 24" width="22" fill="none" stroke="var(--text-3)" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
       </button>
 
       <div class="section-title mt-6">Esta semana</div>
       <div class="row gap-3">
-        <div class="card stat-mini"><div class="mono fs-24 fw-700" style="color:var(--lime)">4</div><div class="t3 text-sm">Entrenos</div></div>
-        <div class="card stat-mini"><div class="mono fs-24 fw-700">🔥 12</div><div class="t3 text-sm">Racha días</div></div>
-        <div class="card stat-mini"><div class="mono fs-24 fw-700">−0.8</div><div class="t3 text-sm">kg semana</div></div>
+        <div class="card stat-mini"><div class="mono fs-24 fw-700" style="color:var(--lime)" id="wkTrainings">—</div><div class="t3 text-sm">Entrenos</div></div>
+        <div class="card stat-mini"><div class="mono fs-24 fw-700" id="wkStreak">—</div><div class="t3 text-sm">Racha días</div></div>
+        <div class="card stat-mini"><div class="mono fs-24 fw-700" id="wkWeight">—</div><div class="t3 text-sm">kg semana</div></div>
       </div>
     </section>
 
     <!-- ============ RUTINA ============ -->
     <section class="a-view" id="a-rutina">
-      <div class="page-head mb-4"><div><h1 class="a-h1">Rutina de hoy</h1><p>Full body A · Lunes</p></div></div>
+      <div class="page-head mb-4"><div><h1 class="a-h1">Rutina de hoy</h1><p>Cargando tu rutina…</p></div></div>
       <div class="card mb-4" style="padding:14px 16px" id="progressBar">
         <div class="row between mb-4" style="margin-bottom:8px"><span class="text-sm muted">Progreso de la sesión</span><span class="mono text-sm" id="sessCount">0/5</span></div>
         <div style="height:8px;background:var(--bg-base);border-radius:999px;overflow:hidden"><div id="sessFill" style="height:100%;width:0;background:var(--lime);border-radius:999px;transition:width .3s var(--ease)"></div></div>
@@ -149,7 +149,7 @@
 
     <!-- ============ CHAT ============ -->
     <section class="a-view" id="a-chat">
-      <div class="page-head mb-4"><div><h1 class="a-h1">Diego · Coach</h1><p>Online · Activo ahora</p></div></div>
+      <div class="page-head mb-4"><div><h1 class="a-h1" id="chatCoachName">Tu coach</h1><p>Chat directo con tu coach</p></div></div>
       <div style="display:flex;flex-direction:column;gap:12px;min-height:420px"></div>
       <div class="row gap-3 mt-4" style="position:sticky;bottom:0"><input class="input" placeholder="Escribe un mensaje…" id="chatInput"><button class="btn btn--primary btn--icon" id="chatSend"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>
     </section>
