@@ -1247,39 +1247,40 @@
     catch { toast(code, "Cópialo manualmente", "info"); }
   });
 
-  /* ---------- Asistencia de hoy (alumnos presenciales) ---------- */
+  /* ---------- Asistencia confirmada (lista del ciclo actual) ----------
+     Muestra los alumnos que confirmaron asistencia. La lista persiste entre
+     días hasta que el coach pulsa "Reiniciar Día". */
   async function renderAttendanceToday() {
     const wrap = $("#attendanceToday");
     if (!wrap) return;
-    const today = new Date().toISOString().slice(0, 10);
     try {
-      const rows = await api.listCoachAttendance(PROFILE.id, today);
-      const presencial = STUDENTS.filter((s) => s.training_type === "Presencial");
-      if (!presencial.length) {
-        wrap.innerHTML = `<p class="t3 text-sm">No tienes alumnos presenciales.</p>`;
+      const rows = await api.listCoachAttendance();
+      if (!rows.length) {
+        wrap.innerHTML = `<p class="t3 text-sm">Aún nadie ha confirmado asistencia. Cuando tus alumnos confirmen, aparecerán aquí.</p>`;
         $("#attendanceSummary") && ($("#attendanceSummary").textContent = "");
         return;
       }
-      const byStudent = {};
-      rows.forEach((r) => { byStudent[r.student_id] = r; });
-      const yes = rows.filter((r) => r.attending).length;
-      const no = rows.filter((r) => !r.attending).length;
-      $("#attendanceSummary") && ($("#attendanceSummary").textContent = `${yes} van · ${no} no van · ${presencial.length - rows.length} sin responder`);
-      wrap.innerHTML = presencial.map((s) => {
-        const r = byStudent[s.id];
-        const badge = !r
-          ? '<span class="badge badge--pend">Sin responder</span>'
-          : r.attending
-            ? '<span class="badge badge--ok">Sí va</span>'
-            : '<span class="badge badge--late">No va</span>';
+      $("#attendanceSummary") && ($("#attendanceSummary").textContent = `${rows.length} confirmado${rows.length === 1 ? "" : "s"}`);
+      wrap.innerHTML = rows.map((r) => {
+        const s = r.students || {};
+        const day = new Date(r.attend_date + "T00:00:00").toLocaleDateString("es-MX", { weekday: "short", day: "numeric", month: "short" });
         return `<div class="due-row">
-          <div class="avatar avatar--sm">${s.initials}</div>
-          <div class="due-row__meta"><div class="due-row__name">${api.esc(s.full_name)}</div><div class="due-row__sub">${api.esc(r && !r.attending && r.reason ? "Motivo: " + r.reason : (r?.reason || ""))}</div></div>
-          ${badge}
+          <div class="avatar avatar--sm">${api.initials(s.full_name)}</div>
+          <div class="due-row__meta"><div class="due-row__name">${api.esc(s.full_name || "Alumno")}</div><div class="due-row__sub">Confirmó para ${api.esc(day)}</div></div>
+          <span class="badge badge--ok">Va</span>
         </div>`;
       }).join("");
     } catch (ex) { wrap.innerHTML = `<p class="t3 text-sm">No se pudo cargar la asistencia.</p>`; }
   }
+  $("#btnResetAttendance")?.addEventListener("click", async () => {
+    const btn = $("#btnResetAttendance"); btn.disabled = true;
+    try {
+      await api.resetAttendanceDay();
+      await renderAttendanceToday();
+      toast("Día reiniciado", "La lista quedó limpia para el siguiente día", "ok");
+    } catch (ex) { errToast(ex, "No se pudo reiniciar el día"); }
+    finally { btn.disabled = false; }
+  });
 
   /* ---------- Refrescos ---------- */
   async function refreshPayments() { PAYMENTS = await api.listPayments(PROFILE.id); renderPayments(); renderDueList(); renderNotifications(); }

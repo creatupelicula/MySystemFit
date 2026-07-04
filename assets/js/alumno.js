@@ -237,15 +237,17 @@
     // Entrenos y racha: solo hay registro de asistencia para presenciales
     if (STUDENT.training_type === "Presencial") {
       try {
-        const rows = await api.listAttendance(STUDENT.id, new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10), todayStr());
-        const attended = rows.filter((r) => r.attending);
-        const thisWeek = attended.filter((r) => r.date >= weekAgo).length;
-        $("#wkTrainings") && ($("#wkTrainings").textContent = thisWeek);
-        // Racha: días consecutivos con asistencia, contando hacia atrás desde hoy/ayer
-        const days = new Set(attended.map((r) => r.date));
+        const from = new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10);
+        const today = todayStr();
+        // Solo cuentan asistencias cuya fecha ya llegó (confirmadas y transcurridas)
+        const days = new Set(
+          (await api.listMyAttendance(STUDENT.id, from)).map((r) => r.attend_date).filter((d) => d <= today)
+        );
+        $("#wkTrainings") && ($("#wkTrainings").textContent = [...days].filter((d) => d >= weekAgo).length);
+        // Racha: días consecutivos con asistencia hacia atrás desde hoy/ayer
         let streak = 0;
         let cursor = new Date();
-        if (!days.has(todayStr())) cursor = new Date(Date.now() - 86400000);
+        if (!days.has(today)) cursor = new Date(Date.now() - 86400000);
         while (days.has(cursor.toISOString().slice(0, 10))) { streak++; cursor = new Date(cursor.getTime() - 86400000); }
         $("#wkStreak") && ($("#wkStreak").textContent = streak > 0 ? `🔥 ${streak}` : "0");
       } catch (ex) { console.error("No se pudieron cargar las estadísticas de asistencia:", ex); }
@@ -263,41 +265,53 @@
     } catch (ex) { console.error("No se pudo calcular el delta de peso semanal:", ex); }
   }
 
-  /* ---------- Asistencia diaria (solo alumnos presenciales) ---------- */
-  const todayStr = () => new Date().toISOString().slice(0, 10);
+  /* ---------- Asistencia para mañana (solo alumnos presenciales) ----------
+     La fecha se calcula en la hora LOCAL del alumno para evitar desfases de
+     zona horaria: "mañana" es el día siguiente a su fecha local actual. */
+  const todayStr = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
+  const tomorrowStr = () => {
+    const d = new Date(Date.now() + 86400000);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
   async function loadAttendance() {
     const card = $("#attendanceCard");
     if (!card || !STUDENT || STUDENT.training_type !== "Presencial") return;
     card.classList.remove("hidden");
-    try {
-      const rows = await api.listAttendance(STUDENT.id, todayStr(), todayStr());
-      if (rows.length) paintAttendanceDone(rows[0]);
-    } catch (ex) { console.error("No se pudo consultar la asistencia de hoy:", ex); }
-  }
-  function paintAttendanceDone(row) {
-    $("#attendanceBtns")?.classList.add("hidden");
-    $("#attendanceReasonBox")?.classList.add("hidden");
-    const st = $("#attendanceStatus");
-    if (st) {
-      st.innerHTML = row.attending
-        ? `<span class="badge badge--ok">Confirmado · Sí vas hoy 💪</span>`
-        : `<span class="badge badge--late">Hoy no vas</span> <span class="t3">${row.reason ? "· " + api.esc(row.reason) : ""}</span>`;
+    const label = $("#attendanceDayLabel");
+    if (label) {
+      const d = new Date(Date.now() + 86400000);
+      label.textContent = d.toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" });
     }
-  }
-  async function saveAttendance(attending, reason) {
     try {
-      const row = await api.setAttendance(STUDENT.id, todayStr(), attending, reason);
-      paintAttendanceDone(row);
-      toast(attending ? "¡Tu coach ya sabe que vas! 🔥" : "Avisamos a tu coach", "ok");
-    } catch (ex) { errToast(ex, "No se pudo guardar tu respuesta"); }
+      const row = await api.myAttendance(STUDENT.id, tomorrowStr());
+      paintAttendance(!!row);
+    } catch (ex) { console.error("No se pudo consultar la asistencia:", ex); }
   }
-  $("#btnAttendYes")?.addEventListener("click", () => saveAttendance(true, null));
-  $("#btnAttendNo")?.addEventListener("click", () => {
-    $("#attendanceReasonBox")?.classList.remove("hidden");
+  function paintAttendance(confirmed) {
+    $("#attendanceBtns")?.classList.toggle("hidden", confirmed);
+    $("#attendanceConfirmed")?.classList.toggle("hidden", !confirmed);
+  }
+  $("#btnAttendYes")?.addEventListener("click", async () => {
+    if (!STUDENT?.coach_id) return;
+    const btn = $("#btnAttendYes"); btn.disabled = true;
+    try {
+      await api.confirmAttendance(STUDENT.id, STUDENT.coach_id, tomorrowStr());
+      paintAttendance(true);
+      toast("¡Tu coach ya sabe que vas mañana! 🔥", "ok");
+    } catch (ex) { errToast(ex, "No se pudo confirmar tu asistencia"); }
+    finally { btn.disabled = false; }
   });
-  $("#btnAttendSendNo")?.addEventListener("click", () => {
-    const reason = $("#attendanceReason")?.value.trim();
-    saveAttendance(false, reason || null);
+  $("#btnAttendCancel")?.addEventListener("click", async () => {
+    const btn = $("#btnAttendCancel"); btn.disabled = true;
+    try {
+      await api.cancelAttendance(STUDENT.id, tomorrowStr());
+      paintAttendance(false);
+      toast("Cancelaste tu asistencia de mañana", "info");
+    } catch (ex) { errToast(ex, "No se pudo cancelar"); }
+    finally { btn.disabled = false; }
   });
 
   /* ---------- Rutina real ---------- */

@@ -66,17 +66,19 @@
         <button class="btn btn--lime btn--block mt-4 hidden" id="renewBtn"></button>
       </div>
 
-      <!-- Asistencia de hoy (solo presencial) -->
+      <!-- Asistencia de mañana (solo presencial) -->
       <div class="card mt-4 hidden" id="attendanceCard">
-        <div class="section-title" style="margin-bottom:4px">¿Vas a entrenar hoy?</div>
-        <p class="t3 text-sm mb-4" id="attendanceStatus">Confírmale a tu coach si asistes hoy.</p>
+        <div class="section-title" style="margin-bottom:4px">¿Vas a entrenar mañana?</div>
+        <p class="t3 text-sm mb-4" id="attendanceStatus">Confirma tu asistencia para <b id="attendanceDayLabel">mañana</b>. Puedes cambiarla hasta las 11:59 PM de hoy.</p>
         <div class="row gap-3" id="attendanceBtns">
-          <button class="btn btn--lime" id="btnAttendYes" style="flex:1">Sí voy 💪</button>
-          <button class="btn btn--ghost" id="btnAttendNo" style="flex:1">No puedo</button>
+          <button class="btn btn--lime" id="btnAttendYes" style="flex:1">Confirmar asistencia 💪</button>
         </div>
-        <div class="hidden mt-4" id="attendanceReasonBox">
-          <div class="field" style="margin-bottom:10px"><label>¿Cuál es el motivo?</label><textarea class="input" id="attendanceReason" style="min-height:70px;resize:vertical" placeholder="Ej. trabajo, enfermedad, viaje…"></textarea></div>
-          <button class="btn btn--primary btn--block" id="btnAttendSendNo">Enviar a mi coach</button>
+        <div class="hidden" id="attendanceConfirmed">
+          <div class="badge badge--ok" style="width:100%;justify-content:center;height:40px">✓ Confirmado para mañana</div>
+          <button class="btn btn--ghost btn--block mt-4" id="btnAttendCancel">Cancelar asistencia</button>
+        </div>
+        <div class="hidden" id="attendanceLocked">
+          <p class="t3 text-sm">Ya no puedes cambiar tu asistencia de mañana. Vuelve más tarde para confirmar el día siguiente.</p>
         </div>
       </div>
 

@@ -281,32 +281,56 @@ window.msfApi = (function () {
     return { code: prof?.referral_code || null, referrals: refs || [] };
   }
 
-  /* ---------- Asistencia (alumnos presenciales) ---------- */
-  async function setAttendance(studentId, date, attending, reason) {
+  /* ---------- Asistencia diaria (confirmación para el día siguiente) ----------
+     El alumno confirma su asistencia para `attendDate` (calculada en su hora
+     local como "mañana"). Puede cancelarla mientras la fecha siga siendo futura.
+     El coach ve la lista de confirmados hasta que pulsa "Reiniciar Día". */
+  async function confirmAttendance(studentId, coachId, attendDate) {
     const { data, error } = await sb()
       .from("attendance")
-      .upsert({ student_id: studentId, date, attending, reason: reason || null }, { onConflict: "student_id,date" })
-      .select()
-      .single();
+      .upsert({ student_id: studentId, coach_id: coachId, attend_date: attendDate, archived: false },
+              { onConflict: "student_id,attend_date" })
+      .select().single();
     if (error) throw error;
     return data;
   }
-  async function listAttendance(studentId, fromDate, toDate) {
-    let q = sb().from("attendance").select("*").eq("student_id", studentId).order("date", { ascending: false });
-    if (fromDate) q = q.gte("date", fromDate);
-    if (toDate) q = q.lte("date", toDate);
+  async function cancelAttendance(studentId, attendDate) {
+    const { error } = await sb()
+      .from("attendance").delete()
+      .eq("student_id", studentId).eq("attend_date", attendDate);
+    if (error) throw error;
+  }
+  // ¿El alumno ya confirmó (activo) para esa fecha?
+  async function myAttendance(studentId, attendDate) {
+    const { data, error } = await sb()
+      .from("attendance").select("*")
+      .eq("student_id", studentId).eq("attend_date", attendDate).eq("archived", false)
+      .maybeSingle();
+    if (error) throw error;
+    return data;
+  }
+  // Confirmaciones activas de los alumnos del coach (lista del ciclo actual).
+  async function listCoachAttendance() {
+    const { data, error } = await sb()
+      .from("attendance")
+      .select("attend_date, created_at, students!inner(id, full_name, training_type)")
+      .eq("archived", false)
+      .order("created_at", { ascending: true });
+    if (error) throw error;
+    return data || [];
+  }
+  async function resetAttendanceDay() {
+    const { error } = await sb().rpc("reset_attendance_day");
+    if (error) throw error;
+  }
+  // Fechas confirmadas por el alumno (para racha/entrenos), desde `fromDate`.
+  async function listMyAttendance(studentId, fromDate) {
+    let q = sb().from("attendance").select("attend_date")
+      .eq("student_id", studentId).order("attend_date", { ascending: false });
+    if (fromDate) q = q.gte("attend_date", fromDate);
     const { data, error } = await q;
     if (error) throw error;
-    return data;
-  }
-  async function listCoachAttendance(coachId, date) {
-    const { data, error } = await sb()
-      .from("attendance")
-      .select("*, students!inner(id, full_name, coach_id, training_type)")
-      .eq("students.coach_id", coachId)
-      .eq("date", date);
-    if (error) throw error;
-    return data;
+    return data || [];
   }
 
   /* ---------- Finanzas (KPIs reales a partir de pagos) ---------- */
@@ -395,7 +419,7 @@ window.msfApi = (function () {
     initials, esc, friendlyError,
     planLimit, planFeatures, countStudents,
     getReferralInfo,
-    setAttendance, listAttendance, listCoachAttendance,
+    confirmAttendance, cancelAttendance, myAttendance, listCoachAttendance, resetAttendanceDay, listMyAttendance,
     financeKpis,
     listStudents, createStudent, createStudentFull, updateStudent, deleteStudent,
     listPayments, markPaymentPaid, createPayment,
