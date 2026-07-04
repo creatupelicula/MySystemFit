@@ -450,6 +450,32 @@
   }
 
   /* ---------- Init ---------- */
+  /* ---------- Objetivos asignados por el coach ---------- */
+  async function loadMyObjectives() {
+    const card = $("#objectivesCard"), box = $("#myObjectives");
+    if (!card || !box || !STUDENT) return;
+    try {
+      const rows = await api.listStudentObjectives(STUDENT.id);
+      if (!rows.length) { card.classList.add("hidden"); return; }
+      card.classList.remove("hidden");
+      box.innerHTML = rows.map((a) => {
+        const o = a.coach_objectives || {};
+        const done = a.status === "done";
+        return `<div class="due-row">
+          <div class="due-row__meta"><div class="due-row__name">${api.esc(o.title || "Objetivo")}</div><div class="due-row__sub">${o.description ? api.esc(o.description) : (o.goal_type ? api.esc(o.goal_type) : "")}</div></div>
+          <button class="btn btn--sm ${done ? "btn--ghost" : "btn--lime"} js-toggle-objective" data-id="${a.id}" data-status="${done ? "active" : "done"}">${done ? "✅ Hecho" : "Marcar hecho"}</button>
+        </div>`;
+      }).join("");
+    } catch (ex) { console.error("No se pudieron cargar tus objetivos:", ex); }
+  }
+  document.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".js-toggle-objective");
+    if (!btn) return;
+    btn.disabled = true;
+    try { await api.setObjectiveStatus(btn.dataset.id, btn.dataset.status); await loadMyObjectives(); }
+    catch (ex) { btn.disabled = false; errToast(ex, "No se pudo actualizar"); }
+  });
+
   /* ---------- Onboarding de objetivos (una sola vez) ---------- */
   function maybeShowOnboarding() {
     if (!STUDENT || STUDENT.onboarding_completed_at) return;
@@ -570,6 +596,7 @@
     } catch (ex) { console.error("No se pudo cargar el perfil del coach:", ex); }
 
     maybeShowOnboarding();
+    loadMyObjectives();
     paintHome();
     animateRing();
     loadAttendance();

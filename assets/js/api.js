@@ -323,6 +323,48 @@ window.msfApi = (function () {
     const { error } = await sb().rpc("reset_attendance_day");
     if (error) throw error;
   }
+  /* ---------- Catálogo de objetivos del coach ---------- */
+  async function listObjectives(coachId) {
+    const { data, error } = await sb().from("coach_objectives")
+      .select("*").eq("coach_id", coachId).order("created_at", { ascending: false });
+    if (error) throw error;
+    return data || [];
+  }
+  async function createObjective(coachId, title, description, goalType) {
+    const { data, error } = await sb().from("coach_objectives")
+      .insert({ coach_id: coachId, title, description: description || null, goal_type: goalType || null })
+      .select().single();
+    if (error) throw error;
+    return data;
+  }
+  async function deleteObjective(id) {
+    const { error } = await sb().from("coach_objectives").delete().eq("id", id);
+    if (error) throw error;
+  }
+  // Asignaciones de un alumno (con el objetivo embebido).
+  async function listStudentObjectives(studentId) {
+    const { data, error } = await sb().from("student_objectives")
+      .select("*, coach_objectives(title, description, goal_type)")
+      .eq("student_id", studentId).order("assigned_at", { ascending: true });
+    if (error) throw error;
+    return data || [];
+  }
+  async function assignObjective(studentId, objectiveId, coachId) {
+    const { error } = await sb().from("student_objectives")
+      .upsert({ student_id: studentId, objective_id: objectiveId, coach_id: coachId },
+              { onConflict: "student_id,objective_id" });
+    if (error) throw error;
+  }
+  async function unassignObjective(studentId, objectiveId) {
+    const { error } = await sb().from("student_objectives")
+      .delete().eq("student_id", studentId).eq("objective_id", objectiveId);
+    if (error) throw error;
+  }
+  async function setObjectiveStatus(id, status) {
+    const { error } = await sb().from("student_objectives").update({ status }).eq("id", id);
+    if (error) throw error;
+  }
+
   // Guarda el onboarding del alumno (una sola vez) vía RPC segura.
   async function saveOnboarding(a) {
     const { error } = await sb().rpc("save_onboarding", {
@@ -435,6 +477,8 @@ window.msfApi = (function () {
     getReferralInfo,
     confirmAttendance, cancelAttendance, myAttendance, listCoachAttendance, resetAttendanceDay, listMyAttendance,
     saveOnboarding,
+    listObjectives, createObjective, deleteObjective,
+    listStudentObjectives, assignObjective, unassignObjective, setObjectiveStatus,
     financeKpis,
     listStudents, createStudent, createStudentFull, updateStudent, deleteStudent,
     listPayments, markPaymentPaid, createPayment,

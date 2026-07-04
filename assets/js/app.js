@@ -308,6 +308,7 @@
 
     loadDrawerRoutine(id);
     loadDrawerPhotos(id);
+    loadDrawerObjectives(id);
     drawer.classList.add("is-open");
     overlay.classList.add("is-open");
     document.body.style.overflow = "hidden";
@@ -1326,6 +1327,91 @@
   }
 
   /* ---------- Init ---------- */
+  /* ---------- Catálogo de objetivos del coach ---------- */
+  let OBJECTIVES = [];
+  async function renderObjectives() {
+    const list = $("#objectivesList");
+    if (!list) return;
+    try {
+      OBJECTIVES = await api.listObjectives(PROFILE.id);
+      if (!OBJECTIVES.length) {
+        list.innerHTML = `<p class="t3 text-sm">Aún no has creado objetivos. Crea el primero arriba.</p>`;
+        return;
+      }
+      list.innerHTML = OBJECTIVES.map((o) => `
+        <div class="due-row">
+          <div class="due-row__meta">
+            <div class="due-row__name">${api.esc(o.title)}</div>
+            <div class="due-row__sub">${o.goal_type ? api.esc(o.goal_type) : "Cualquier objetivo"}${o.description ? " · " + api.esc(o.description) : ""}</div>
+          </div>
+          <button class="icon-btn js-del-objective" data-id="${o.id}" title="Eliminar">
+            <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+        </div>`).join("");
+    } catch (ex) { errToast(ex, "No se pudo cargar el catálogo de objetivos"); }
+  }
+  function wireObjectives() {
+    $("#formObjective")?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const title = $("#objTitle").value.trim();
+      if (!title) return;
+      try {
+        await api.createObjective(PROFILE.id, title, $("#objDesc").value.trim(), $("#objGoalType").value);
+        $("#objTitle").value = ""; $("#objDesc").value = ""; $("#objGoalType").value = "";
+        await renderObjectives();
+        toast("Objetivo añadido", "Se asignará automáticamente a los alumnos que coincidan", "ok");
+      } catch (ex) { errToast(ex, "No se pudo crear el objetivo"); }
+    });
+    $("#objectivesList")?.addEventListener("click", async (e) => {
+      const btn = e.target.closest(".js-del-objective");
+      if (!btn) return;
+      try { await api.deleteObjective(btn.dataset.id); await renderObjectives(); }
+      catch (ex) { errToast(ex, "No se pudo eliminar"); }
+    });
+    // Asignar / quitar objetivos desde la ficha del alumno (delegado)
+    $("#dwObjectives")?.addEventListener("click", async (e) => {
+      const assign = e.target.closest(".js-assign");
+      const unassign = e.target.closest(".js-unassign");
+      try {
+        if (assign) {
+          const sel = $("#dwAssignSelect");
+          if (!sel?.value) return;
+          await api.assignObjective(assign.dataset.student, sel.value, PROFILE.id);
+          await loadDrawerObjectives(assign.dataset.student);
+        } else if (unassign) {
+          await api.unassignObjective(unassign.dataset.student, unassign.dataset.obj);
+          await loadDrawerObjectives(unassign.dataset.student);
+        }
+      } catch (ex) { errToast(ex, "No se pudo actualizar el objetivo"); }
+    });
+  }
+
+  /* Objetivos asignados al alumno del drawer + asignación manual */
+  async function loadDrawerObjectives(studentId) {
+    const box = $("#dwObjectives");
+    if (!box) return;
+    try {
+      const [assigned, catalog] = await Promise.all([
+        api.listStudentObjectives(studentId),
+        OBJECTIVES.length ? Promise.resolve(OBJECTIVES) : api.listObjectives(PROFILE.id),
+      ]);
+      OBJECTIVES = catalog;
+      const assignedIds = new Set(assigned.map((a) => a.objective_id));
+      const chips = assigned.map((a) => {
+        const o = a.coach_objectives || {};
+        return `<div class="due-row">
+          <div class="due-row__meta"><div class="due-row__name">${api.esc(o.title || "Objetivo")}</div><div class="due-row__sub">${a.auto ? "Asignado automáticamente" : "Asignado por ti"}${a.status === "done" ? " · ✅ Completado" : ""}</div></div>
+          <button class="icon-btn js-unassign" data-obj="${a.objective_id}" data-student="${studentId}" title="Quitar"><svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </div>`;
+      }).join("") || `<p class="t3 text-sm">Sin objetivos asignados.</p>`;
+      const available = catalog.filter((o) => !assignedIds.has(o.id));
+      const select = available.length
+        ? `<div class="row gap-3 mt-4"><select class="select" id="dwAssignSelect" style="flex:1"><option value="">Asignar objetivo…</option>${available.map((o) => `<option value="${o.id}">${api.esc(o.title)}</option>`).join("")}</select><button class="btn btn--ghost btn--sm js-assign" data-student="${studentId}">Asignar</button></div>`
+        : (catalog.length ? "" : `<p class="t3 text-sm mt-4">Crea objetivos en Ajustes para asignarlos.</p>`);
+      box.innerHTML = chips + select;
+    } catch (ex) { console.error("No se pudieron cargar los objetivos del alumno:", ex); }
+  }
+
   async function init() {
     const auth = await window.msfAuth.requireRole("coach");
     if (!auth) return;
@@ -1366,6 +1452,8 @@
     fillRoutineSelect();
     renderAccentSwatches();
     renderAttendanceToday();
+    renderObjectives();
+    wireObjectives();
     subscribeRealtime();
     handleCheckoutReturn();
   }

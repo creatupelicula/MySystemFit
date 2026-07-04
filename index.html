@@ -402,6 +402,27 @@
             </div>
           </div>
         </div>
+
+        <div class="card mt-6">
+          <div class="section-title">Catálogo de objetivos</div>
+          <p class="t3 text-sm mb-4">Crea objetivos o programas. Cuando un alumno termine su cuestionario de bienvenida, se le asignarán automáticamente los que coincidan con su objetivo.</p>
+          <form id="formObjective" class="stack gap-3 mb-4">
+            <div class="row gap-3" style="flex-wrap:wrap">
+              <input class="input" id="objTitle" placeholder="Título (ej. Programa de definición 8 semanas)" required style="flex:2;min-width:220px">
+              <select class="select" id="objGoalType" style="flex:1;min-width:160px">
+                <option value="">Cualquier objetivo</option>
+                <option>Perder grasa</option>
+                <option>Ganar músculo</option>
+                <option>Recomposición</option>
+                <option>Rendimiento</option>
+                <option>Salud y hábitos</option>
+              </select>
+            </div>
+            <textarea class="input" id="objDesc" placeholder="Descripción (opcional): en qué consiste este objetivo…" style="min-height:60px;resize:vertical"></textarea>
+            <button type="submit" class="btn btn--primary btn--sm" style="align-self:flex-start">Añadir objetivo</button>
+          </form>
+          <div id="objectivesList"></div>
+        </div>
       </section>
 
     </div>
@@ -449,6 +470,10 @@
         <div class="kv mb-2"><span>Fecha objetivo</span><span id="dwTargetDate">—</span></div>
         <div class="kv mb-2"><span>Lesiones</span><span id="dwInjuries">—</span></div>
         <div class="kv"><span>Motivación</span><span id="dwMotivation">—</span></div>
+      </div>
+      <div class="card mt-4 card--flat">
+        <div class="section-title">Objetivos asignados</div>
+        <div id="dwObjectives"></div>
       </div>
       <div class="card mt-4 card--flat">
         <div class="section-title">Contacto</div>
