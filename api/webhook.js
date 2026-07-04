@@ -28,8 +28,14 @@ async function syncSubscription(db, sub) {
 
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Método no permitido" });
-  const whsec = process.env.STRIPE_WEBHOOK_SECRET;
-  const sk = stripe();
+  let sk, whsec;
+  try {
+    sk = stripe();
+    whsec = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!whsec) throw new Error("Falta STRIPE_WEBHOOK_SECRET");
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
   let event;
   try {
     const raw = await readRaw(req);
