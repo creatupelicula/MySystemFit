@@ -15,7 +15,16 @@ La base de datos del proyecto Supabase **MySystemFit** (`fqlwirnaproktxrtdqya`) 
 | Kings (futuro) | 500 | ✓ | ✓ | pendiente |
 
 - El límite de alumnos se valida en la app **y** con un trigger en la BD (`enforce_student_limit`), imposible de brincar desde el cliente.
-- Todo coach nuevo se registra con plan **Star**. El plan se cambia por ahora directo en la tabla `profiles` (columna `plan`); los pagos online de suscripción vienen después.
+- Todo coach nuevo se registra con plan **Star**. El upgrade a Star Plus se hace pagando con Stripe (ver abajo); el webhook actualiza el plan automáticamente.
+
+### Suscripción con Stripe (modo test, verificado end-to-end)
+
+- Star $500 MXN/mes, Star Plus $1,000 MXN/mes. Precios: `price_1TpIMNApZFJajGb5gBqi0AKV` (Star) y `price_1TpIMOApZFJajGb59wq3enZx` (Star Plus), cuenta de Stripe `acct_1TpIC6ApZFJajGb5`.
+- Funciones serverless en `api/`: `checkout.js` (crea la sesión de pago), `portal.js` (portal de cliente para cancelar/cambiar), `webhook.js` (verifica la firma y sincroniza `profiles.plan` / `subscription_status` / `current_period_end`).
+- Variables de entorno requeridas en Vercel: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_STAR`, `STRIPE_PRICE_STAR_PLUS`, `SUPABASE_SERVICE_ROLE_KEY` (además de `SUPABASE_URL`/`SUPABASE_ANON_KEY` que ya existían).
+- El webhook está registrado en `https://dashboard.stripe.com/acct_1TpIC6ApZFJajGb5/test/webhooks` — **importante**: Stripe permite tener varias cuentas y el link genérico `/test/webhooks` abre la que esté activa en el navegador, no necesariamente esta. Usar siempre el link con el `acct_...` explícito para evitar crear cosas en la cuenta equivocada.
+- Probado con pago real en modo test (tarjeta `4242 4242 4242 4242`): checkout → webhook → `profiles.plan` cambia solo, cancelación → vuelve a Star solo.
+- **Para pasar a modo LIVE** (cobrar de verdad): repetir el mismo proceso pero con las llaves *live* de Stripe (`sk_live_...`), crear productos/precios de nuevo en modo live (o activar el toggle de "copiar a modo live" en el dashboard), y crear el webhook de nuevo apuntando con las claves live — los IDs de test y live son completamente independientes.
 
 ### Features implementadas
 
