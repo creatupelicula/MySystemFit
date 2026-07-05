@@ -780,6 +780,16 @@ ul { list-style: none; }
 .form-grid .field--full { grid-column: 1 / -1; }
 @media (max-width: 560px) { .form-grid { grid-template-columns: 1fr; } }
 
+/* ================= RESPONSIVE DE FILAS DENTRO DE MODALES ================= */
+/* Algunos modales usan .row con campos flex:1 en vez de .form-grid; en
+   pantallas angostas eso desborda el modal. Se acota a .modal para no tocar
+   .row fuera de modales (topbar, cards, etc.). */
+.modal .row { flex-wrap: wrap; }
+@media (max-width: 480px) {
+  .modal .row { flex-direction: column; align-items: stretch; gap: var(--s-3); }
+  .modal .row > .field { flex: 1 1 100% !important; }
+}
+
 /* ================= SWATCHES DE COLOR ================= */
 .swatches { display: flex; flex-wrap: wrap; gap: var(--s-2); }
 .swatch { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--border); transition: transform var(--dur) var(--ease), box-shadow var(--dur); position: relative; }

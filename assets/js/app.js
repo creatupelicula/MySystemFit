@@ -112,10 +112,10 @@
   }
   document.addEventListener("click", (e) => {
     const nav = e.target.closest("[data-nav]");
-    if (nav) { goTo(nav.dataset.nav); }
+    if (nav) { window.msfSound?.playSound?.("click"); goTo(nav.dataset.nav); }
   });
 
-  $("#menuToggle")?.addEventListener("click", () => $("#sidebar").classList.toggle("is-open"));
+  $("#menuToggle")?.addEventListener("click", () => { window.msfSound?.playSound?.("click"); $("#sidebar").classList.toggle("is-open"); });
 
   function toggleTheme() {
     const mode = window.msfTheme.toggleMode();
@@ -423,7 +423,7 @@
       if (f) f.style.display = edit ? "none" : "";
     });
   }
-  function openStudentEditor(id) {
+  async function openStudentEditor(id) {
     const s = STUDENTS.find((x) => x.id === id);
     if (!s) return;
     EDIT_STUDENT_ID = id;
@@ -431,7 +431,7 @@
     $("#nsPhone").value = s.phone || "";
     $("#nsType").value = s.training_type || "Online";
     $("#nsState") && ($("#nsState").value = s.state || "pendiente");
-    if (s.goal) $("#nsGoal").value = s.goal;
+    await fillGoalSelect($("#nsGoal"), s.goal);
     $("#nsWeight").value = s.weight_current ?? "";
     $("#nsWeightGoal").value = s.weight_goal ?? "";
     $("#nsStart").value = s.member_since || "";
@@ -440,7 +440,29 @@
     setStudentModalMode(true);
     $("#modal-newStudent").classList.add("is-open");
   }
-  $("#btnEditStudent")?.addEventListener("click", () => { if (CURRENT_STUDENT_ID) openStudentEditor(CURRENT_STUDENT_ID); });
+  $("#btnEditStudent")?.addEventListener("click", async () => { if (CURRENT_STUDENT_ID) await openStudentEditor(CURRENT_STUDENT_ID); });
+  $("#btnDeleteStudent")?.addEventListener("click", () => {
+    if (!CURRENT_STUDENT_ID) return;
+    window.msfSound?.playSound?.("click");
+    $("#modal-deleteStudent")?.classList.add("is-open");
+  });
+  $("#btnConfirmDeleteStudent")?.addEventListener("click", async () => {
+    if (!CURRENT_STUDENT_ID) return;
+    const btn = $("#btnConfirmDeleteStudent");
+    btn.disabled = true;
+    try {
+      const id = CURRENT_STUDENT_ID;
+      const student = STUDENTS.find((x) => x.id === id);
+      await api.deleteStudent(id);
+      STUDENTS = STUDENTS.filter((x) => x.id !== id);
+      renderStudents();
+      closeDrawer();
+      $$(".modal-overlay").forEach((m) => m.classList.remove("is-open"));
+      toast("Alumno eliminado", student?.full_name || "", "ok");
+      window.msfSound?.playSound?.("delete");
+    } catch (ex) { errToast(ex, "No se pudo eliminar al alumno"); }
+    finally { btn.disabled = false; }
+  });
   function closeDrawer() {
     drawer.classList.remove("is-open");
     overlay.classList.remove("is-open");
@@ -471,13 +493,14 @@
       showUpsell(TAB_FEATURE[t.dataset.tab]);
       return;
     }
+    window.msfSound?.playSound?.("click");
     $$("#dwTabs .tab").forEach((x) => x.classList.remove("is-active"));
     t.classList.add("is-active");
     $$(".drawer__body .tab-panel").forEach((p) => p.classList.toggle("is-active", p.dataset.panel === t.dataset.tab));
   });
 
   /* ---------- Modales ---------- */
-  document.addEventListener("click", (e) => {
+  document.addEventListener("click", async (e) => {
     const open = e.target.closest("[data-modal]");
     if (open) {
       const name = open.dataset.modal;
@@ -496,6 +519,7 @@
         $("#formNewStudent").reset();
         setStudentModalMode(false);
         $("#nsStart").value = today;
+        await fillGoalSelect($("#nsGoal"));
       }
       $("#modal-" + name)?.classList.add("is-open");
     }
@@ -542,6 +566,7 @@
         $$(".modal-overlay").forEach((m) => m.classList.remove("is-open"));
         EDIT_STUDENT_ID = null;
         toast("Alumno actualizado", name, "ok");
+        window.msfSound?.playSound?.("save");
       } catch (ex) { errToast(ex, "No se pudo actualizar el alumno"); }
       finally { btn.disabled = false; btn.textContent = btnLabel; }
       return;
@@ -570,6 +595,7 @@
       $$(".modal-overlay").forEach((m) => m.classList.remove("is-open"));
       e.target.reset();
       toast("Alumno creado", email ? `${name} ya puede iniciar sesión` : name, "ok");
+      window.msfSound?.playSound?.("save");
       applyPlanGating();
     } catch (ex) {
       if (ex._planLimit) {
@@ -635,6 +661,17 @@
     const prev = sel.value;
     sel.innerHTML = opts;
     if (prev) sel.value = prev;
+  }
+  // Objetivo del alta manual: mismo catálogo que verá el alumno en su onboarding
+  // (5 de sistema + personalizados del coach si es Star+), para que la
+  // preselección funcione por coincidencia exacta de título.
+  async function fillGoalSelect(selectEl, selectedTitle) {
+    if (!selectEl) return;
+    try {
+      const catalog = await api.listCatalogAndCustom(PROFILE.id);
+      selectEl.innerHTML = catalog.map((o) => `<option value="${api.esc(o.title)}">${api.esc(o.title)}</option>`).join("");
+      if (selectedTitle && catalog.some((o) => o.title === selectedTitle)) selectEl.value = selectedTitle;
+    } catch (ex) { console.error("No se pudo cargar el catálogo de objetivos:", ex); }
   }
 
   /* ---------- Checkboxes de seguimientos (persistidos) ---------- */

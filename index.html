@@ -516,6 +516,7 @@
         <div class="kv"><span>Membresía</span><span id="dwMembership">—</span></div>
       </div>
       <button class="btn btn--ghost btn--block mt-4" id="btnEditStudent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>Editar datos del alumno</button>
+      <button class="btn btn--ghost btn--block mt-4" id="btnDeleteStudent" style="color:var(--coral)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Eliminar alumno</button>
     </div>
     <div class="tab-panel" data-panel="pagos">
       <div id="dwPayments"></div>
@@ -558,6 +559,15 @@
 </aside>
 
 <!-- ============ MODALES ============ -->
+<div class="modal-overlay" id="modal-deleteStudent">
+  <div class="modal">
+    <div class="modal__ico danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></div>
+    <h3>¿Eliminar a este alumno?</h3>
+    <p>Esta acción es permanente. Se borrarán su ficha, pagos, rutinas y objetivos asignados. No se puede deshacer.</p>
+    <div class="modal__actions"><button class="btn btn--ghost js-modal-close">Cancelar</button><button class="btn btn--danger" id="btnConfirmDeleteStudent" style="background:var(--coral);color:#fff;border-color:transparent">Sí, eliminar</button></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-deleteAccount">
   <div class="modal">
     <div class="modal__ico danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></div>
@@ -580,7 +590,7 @@
         <div class="field"><label for="nsPassword">Contraseña de acceso</label><input class="input" type="text" id="nsPassword" placeholder="mín. 6 caracteres" minlength="6"></div>
         <div class="field"><label for="nsType">Tipo</label><select class="select" id="nsType"><option>Online</option><option>Presencial</option></select></div>
         <div class="field"><label for="nsState">Estado del alumno</label><select class="select" id="nsState"><option value="pendiente">Pendiente</option><option value="activo">Activo</option><option value="suspendido">Suspendido</option><option value="inactivo">Inactivo</option><option value="cancelado">Cancelado</option></select></div>
-        <div class="field"><label for="nsGoal">Objetivo</label><select class="select" id="nsGoal"><option>Pérdida de grasa</option><option>Hipertrofia</option><option>Recomposición</option><option>Mantenimiento</option><option>Fuerza</option></select></div>
+        <div class="field"><label for="nsGoal">Objetivo</label><select class="select" id="nsGoal"></select></div>
         <div class="field"><label for="nsWeight">Peso actual (kg)</label><input class="input" type="number" step="0.1" id="nsWeight" placeholder="70"></div>
         <div class="field"><label for="nsWeightGoal">Peso objetivo (kg)</label><input class="input" type="number" step="0.1" id="nsWeightGoal" placeholder="65"></div>
         <div class="field"><label for="nsStart">Inicio de membresía</label><input class="input" type="date" id="nsStart"></div>

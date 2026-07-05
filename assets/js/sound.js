@@ -25,6 +25,7 @@ window.msfSound = (function () {
     save:    { freq: 740,  dur: 0.10, type: "triangle", gain: 0.07 },
     notify:  { freq: 1046, dur: 0.15, type: "sine",     gain: 0.06 },
     payment: { freq: 988,  dur: 0.18, type: "triangle", gain: 0.08 },
+    delete:  { freq: 320,  dur: 0.14, type: "sawtooth", gain: 0.06 }, // tono grave, diferenciado del resto
   };
 
   function playSound(name) {

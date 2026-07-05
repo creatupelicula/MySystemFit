@@ -621,6 +621,11 @@
     if (!COACH_FEATURES.routines && ($("#a-rutina")?.classList.contains("is-active") || $("#a-progreso")?.classList.contains("is-active"))) anav("home");
     // Subida de fotos: Star+. La encuesta diaria es de plan Free, siempre disponible.
     $("#dropzone")?.classList.toggle("is-locked", !COACH_FEATURES.photos);
+    // Excepción confirmada: estas 2 superficies se OCULTAN por completo (no solo
+    // atenuadas) para no dejar elementos muertos en la topbar/home. El resto del
+    // patrón de bloqueo (nav inferior, FAB de chat) sigue "visible pero atenuado".
+    $("#aBellBtn")?.classList.toggle("hidden", !COACH_FEATURES.messages);
+    $("#aRoutineTodayCard")?.classList.toggle("hidden", !COACH_FEATURES.routines);
     // Objetivos: catálogo simple en Free (sin seguimiento), card rico con progreso en Star+.
     if (COACH_FEATURES.objectives) {
       $("#objectivesSimple")?.classList.add("hidden");
@@ -771,21 +776,29 @@
     const bar = $("#obBar"), stepNum = $("#obStepNum"),
           backBtn = $("#obBack"), nextBtn = $("#obNext"), errEl = $("#obError");
 
-    // Paso 1: objetivos del catálogo del coach, o pregunta abierta si no hay.
+    // Paso 1: objetivos del catálogo (5 de sistema, Free; + personalizados del
+    // coach si es Star+), o pregunta abierta si por alguna razón no hay ninguno.
     let goalIsFree = false;
     const choicesBox = $("#obGoalChoices");
     try {
-      const catalog = (await api.listObjectives(PROFILE.coach_id)).filter((o) => o.active !== false);
+      const catalog = (await api.listCatalogAndCustom(PROFILE.coach_id)).filter((o) => o.active !== false);
       if (catalog.length) {
         choicesBox.innerHTML = catalog.map((o) =>
           `<div class="ob-choice" data-value="${api.esc(o.title)}"><span class="ob-choice__emoji">🎯</span><div><div class="ob-choice__t">${api.esc(o.title)}</div>${o.description ? `<div class="ob-choice__s">${api.esc(o.description)}</div>` : ""}</div></div>`
         ).join("");
+        // Preselecciona el objetivo que el coach ya haya cargado en el alta
+        // manual (mismo patrón que peso/altura/edad, más abajo).
+        if (STUDENT.goal) {
+          const match = choicesBox.querySelector(`[data-value="${CSS.escape(STUDENT.goal)}"]`);
+          if (match) { match.classList.add("sel"); answers.goal = STUDENT.goal; }
+        }
       } else { goalIsFree = true; }
     } catch (_) { goalIsFree = true; }
     if (goalIsFree) {
       choicesBox.classList.add("hidden");
       $("#obGoalFreeWrap").classList.remove("hidden");
       $("#obGoalHint").textContent = "Tu coach aún no ha configurado objetivos personalizados. Cuéntanos con tus palabras: ¿cuál es tu objetivo?";
+      if (STUDENT.goal) $("#obGoalText") && ($("#obGoalText").value = STUDENT.goal);
     }
 
     // Prellena con lo que el coach ya tenga cargado
