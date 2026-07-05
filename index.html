@@ -210,11 +210,18 @@
         <div class="card mt-6">
           <div class="row between mb-4">
             <div>
-              <div class="section-title" style="margin:0">Asistencia confirmada · presencial</div>
+              <div class="section-title" style="margin:0">Encuesta diaria</div>
               <span class="t3 text-sm" id="attendanceSummary"></span>
             </div>
             <button class="btn btn--ghost btn--sm" id="btnResetAttendance">Reiniciar Día</button>
           </div>
+          <div class="row gap-3 wrap mb-4" style="align-items:center">
+            <input class="input" id="attSearch" placeholder="Buscar alumno…" style="flex:1;min-width:160px;height:38px">
+            <select class="select" id="attFilterMode" style="width:auto;height:38px"><option value="all">Todos</option><option value="Presencial">Presencial</option><option value="Online">Online</option></select>
+            <select class="select" id="attFilterResp" style="width:auto;height:38px"><option value="all">Sí y no</option><option value="yes">Solo sí</option><option value="no">Solo no</option></select>
+            <select class="select" id="attSort" style="width:auto;height:38px"><option value="time">Ordenar por horario</option><option value="name">Ordenar por nombre</option></select>
+          </div>
+          <div class="row gap-3 mb-4" id="attStats"></div>
           <div id="attendanceToday"></div>
         </div>
       </section>

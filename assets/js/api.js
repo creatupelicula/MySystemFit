@@ -26,19 +26,24 @@ window.msfApi = (function () {
     return ""; // sin traducción conocida: el llamador muestra solo su mensaje base
   }
 
-  /* ---------- Planes ----------
-     Sistema central de permisos. El coach contrata el plan; el alumno SIEMPRE
-     hereda las capacidades del plan de su coach (nunca tiene plan propio).
-     La UI se bloquea con estos flags y la BD respalda el límite con trigger. */
+  /* ---------- Sistema central de capacidades por plan ----------
+     ÚNICA fuente de verdad en el frontend. Ningún módulo debe escribir su
+     propio "if (plan === ...)" — todos preguntan aquí (api.can(feature, plan)).
+     Debe coincidir exactamente con la función `plan_features()` en la BD:
+     esa es la que de verdad protege (RLS); esto solo evita parpadeos de UI.
+     El coach contrata el plan; el alumno SIEMPRE hereda el de su coach
+     (nunca tiene plan propio, nunca ve precios ni Stripe). */
   const PLAN_LIMITS = { "Free": 30, "Star": 100, "Star Plus": 300, "Kings": 500 };
   const PLAN_FEATURES = {
-    "Free":      { messages: false, followups: false, routines: false, community: false, attendance: false, ai: false },
-    "Star":      { messages: true,  followups: true,  routines: false, community: false, attendance: true,  ai: false },
-    "Star Plus": { messages: true,  followups: true,  routines: true,  community: true,  attendance: true,  ai: false },
-    "Kings":     { messages: true,  followups: true,  routines: true,  community: true,  attendance: true,  ai: true },
+    "Free":      { messages: false, objectives: false, photos: false, community: false, routines: false },
+    "Star":      { messages: true,  objectives: true,  photos: true,  community: false, routines: false },
+    "Star Plus": { messages: true,  objectives: true,  photos: true,  community: true,  routines: true },
+    "Kings":     { messages: true,  objectives: true,  photos: true,  community: true,  routines: true },
   };
   function planLimit(plan) { return PLAN_LIMITS[plan] ?? PLAN_LIMITS["Free"]; }
   function planFeatures(plan) { return PLAN_FEATURES[plan] ?? PLAN_FEATURES["Free"]; }
+  // Único punto de consulta de una capacidad puntual: api.can("messages", plan).
+  function can(feature, plan) { return !!planFeatures(plan)[feature]; }
   // Plan efectivo del usuario actual: el suyo si es coach, el de su coach si es alumno.
   async function myCoachPlan() {
     const { data, error } = await sb().rpc("my_coach_plan");
@@ -289,16 +294,16 @@ window.msfApi = (function () {
     return { code: prof?.referral_code || null, referrals: refs || [] };
   }
 
-  /* ---------- Asistencia diaria (confirmación para el día siguiente) ----------
-     El alumno confirma su asistencia para `attendDate` (calculada en su hora
-     local como "mañana"). Puede cancelarla mientras la fecha siga siendo futura.
-     El coach ve la lista de confirmados hasta que pulsa "Reiniciar Día". */
-  async function confirmAttendance(studentId, coachId, attendDate) {
-    const { data, error } = await sb()
-      .from("attendance")
-      .upsert({ student_id: studentId, coach_id: coachId, attend_date: attendDate, archived: false },
-              { onConflict: "student_id,attend_date" })
-      .select().single();
+  /* ---------- Encuesta diaria ----------
+     Presencial: responde para MAÑANA (¿asistirás?) con horario si es sí, o
+     motivo si es no. Online: responde para HOY (¿entrenaste?) mismo esquema.
+     Sin fila = sin responder. El coach ve la lista hasta "Reiniciar Día". */
+  async function saveDailySurvey(studentId, coachId, attendDate, { response, scheduled_time, reason }) {
+    await sb().from("attendance").delete().eq("student_id", studentId).eq("attend_date", attendDate);
+    const { data, error } = await sb().from("attendance").insert({
+      student_id: studentId, coach_id: coachId, attend_date: attendDate, archived: false,
+      response, scheduled_time: scheduled_time || null, reason: reason || null,
+    }).select().single();
     if (error) throw error;
     return data;
   }
@@ -308,7 +313,7 @@ window.msfApi = (function () {
       .eq("student_id", studentId).eq("attend_date", attendDate);
     if (error) throw error;
   }
-  // ¿El alumno ya confirmó (activo) para esa fecha?
+  // ¿El alumno ya respondió (activo) para esa fecha?
   async function myAttendance(studentId, attendDate) {
     const { data, error } = await sb()
       .from("attendance").select("*")
@@ -317,11 +322,11 @@ window.msfApi = (function () {
     if (error) throw error;
     return data;
   }
-  // Confirmaciones activas de los alumnos del coach (lista del ciclo actual).
+  // Respuestas activas de los alumnos del coach (lista del ciclo actual).
   async function listCoachAttendance() {
     const { data, error } = await sb()
       .from("attendance")
-      .select("attend_date, created_at, students!inner(id, full_name, training_type)")
+      .select("attend_date, created_at, response, scheduled_time, reason, students!inner(id, full_name, training_type)")
       .eq("archived", false)
       .order("created_at", { ascending: true });
     if (error) throw error;
@@ -485,9 +490,9 @@ window.msfApi = (function () {
 
   return {
     initials, esc, friendlyError,
-    planLimit, planFeatures, myCoachPlan, countStudents,
+    planLimit, planFeatures, can, myCoachPlan, countStudents,
     getReferralInfo,
-    confirmAttendance, cancelAttendance, myAttendance, listCoachAttendance, resetAttendanceDay, listMyAttendance,
+    saveDailySurvey, cancelAttendance, myAttendance, listCoachAttendance, resetAttendanceDay, listMyAttendance,
     saveOnboarding,
     listObjectives, createObjective, deleteObjective,
     listStudentObjectives, assignObjective, unassignObjective, setObjectiveStatus,

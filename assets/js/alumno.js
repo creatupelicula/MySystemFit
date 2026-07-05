@@ -38,8 +38,15 @@
     if (e.target.closest("#aLogout")) { e.preventDefault(); doLogout(); }
   });
 
-  /* Navegación bottom nav */
+  /* Navegación bottom nav. Las vistas bloqueadas por el plan del coach NUNCA
+     se ocultan (per spec): quedan visibles pero atenuadas, y al tocarlas
+     muestran un mensaje neutro — el alumno JAMÁS ve opciones de mejorar plan. */
+  const LOCKED_NAVS = new Set();
   function anav(view) {
+    if (LOCKED_NAVS.has(view)) {
+      toast("Esta función estará disponible cuando tu coach actualice su plan.", "info");
+      return;
+    }
     $$(".a-view").forEach((v) => v.classList.remove("is-active"));
     $("#a-" + view)?.classList.add("is-active");
     $$(".a-nav button").forEach((b) => b.classList.toggle("is-active", b.dataset.anav === view));
@@ -146,7 +153,13 @@
   /* Dropzone fotos → subida real a Supabase Storage */
   const dz = $("#dropzone"), fi = $("#fileInput"), prev = $("#dropPreview");
   let pendingFile = null;
-  dz?.addEventListener("click", () => fi.click());
+  dz?.addEventListener("click", () => {
+    if (dz.classList.contains("is-locked")) {
+      toast("Esta función estará disponible cuando tu coach actualice su plan.", "info");
+      return;
+    }
+    fi.click();
+  });
   ["dragover", "dragenter"].forEach((ev) => dz?.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add("drag"); }));
   ["dragleave", "drop"].forEach((ev) => dz?.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.remove("drag"); }));
   function showPreview(file) {
@@ -278,9 +291,8 @@
     } catch (ex) { console.error("No se pudo calcular el delta de peso semanal:", ex); }
   }
 
-  /* ---------- Asistencia para mañana (solo alumnos presenciales) ----------
-     La fecha se calcula en la hora LOCAL del alumno para evitar desfases de
-     zona horaria: "mañana" es el día siguiente a su fecha local actual. */
+  /* ---------- Encuesta diaria: presencial (¿asistirás mañana?) u online
+     (¿entrenaste hoy?) — nunca ambas a la vez. Fechas en hora LOCAL. ---------- */
   const todayStr = () => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -289,42 +301,151 @@
     const d = new Date(Date.now() + 86400000);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   };
+  // Horarios 05:00–12:00 cada 30 min, para el wheel picker.
+  function buildTimeSlots() {
+    const slots = [];
+    for (let h = 5; h <= 12; h++) {
+      slots.push(`${String(h).padStart(2, "0")}:00`);
+      if (h < 12) slots.push(`${String(h).padStart(2, "0")}:30`);
+    }
+    return slots;
+  }
+  // Selector tipo rueda (scroll-snap): cada slot es una fila; la centrada = seleccionada.
+  function initWheelPicker(container, slots, initial) {
+    container.querySelectorAll(".wheel-picker__item, .wheel-picker__pad").forEach((n) => n.remove());
+    const topPad = document.createElement("div"); topPad.className = "wheel-picker__pad";
+    container.appendChild(topPad);
+    slots.forEach((s) => {
+      const el = document.createElement("div");
+      el.className = "wheel-picker__item"; el.dataset.value = s; el.textContent = s;
+      container.appendChild(el);
+    });
+    const botPad = document.createElement("div"); botPad.className = "wheel-picker__pad";
+    container.appendChild(botPad);
+    let selected = initial && slots.includes(initial) ? initial : slots[Math.floor(slots.length / 2)];
+    function paintCenter() {
+      const items = [...container.querySelectorAll(".wheel-picker__item")];
+      const mid = container.scrollTop + container.clientHeight / 2;
+      let closest = items[0], closestDist = Infinity;
+      items.forEach((it) => {
+        const d = Math.abs((it.offsetTop + it.offsetHeight / 2) - mid);
+        it.classList.toggle("is-center", false);
+        if (d < closestDist) { closestDist = d; closest = it; }
+      });
+      closest.classList.add("is-center");
+      selected = closest.dataset.value;
+    }
+    let scrollTimer;
+    container.addEventListener("scroll", () => {
+      clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(paintCenter, 60);
+    });
+    // Posiciona el scroll en el valor inicial.
+    requestAnimationFrame(() => {
+      const target = [...container.querySelectorAll(".wheel-picker__item")].find((it) => it.dataset.value === selected);
+      if (target) container.scrollTop = target.offsetTop - container.clientHeight / 2 + target.offsetHeight / 2;
+      paintCenter();
+    });
+    return { getValue: () => selected };
+  }
+
+  let wheelApi = null;
+  let surveyMode = null; // "presencial" | "online"
+  let surveyDate = null;
+
   async function loadAttendance() {
     const card = $("#attendanceCard");
-    if (!card || !STUDENT || STUDENT.training_type !== "Presencial") return;
-    if (!COACH_FEATURES.attendance) { card.classList.add("hidden"); return; }
+    if (!card || !STUDENT) return;
     card.classList.remove("hidden");
-    const label = $("#attendanceDayLabel");
-    if (label) {
+    surveyMode = STUDENT.training_type === "Presencial" ? "presencial" : "online";
+    surveyDate = surveyMode === "presencial" ? tomorrowStr() : todayStr();
+
+    const q = $("#attendanceQuestion"), st = $("#attendanceStatus"), timeLbl = $("#attendanceTimeLabel"), reasonLbl = $("#attendanceReasonLabel");
+    if (surveyMode === "presencial") {
       const d = new Date(Date.now() + 86400000);
-      label.textContent = d.toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" });
+      const dayTxt = d.toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" });
+      q.textContent = "¿Asistirás mañana al gimnasio?";
+      st.textContent = `Respondiendo para ${dayTxt}. Puedes cambiarla hasta las 11:59 PM de hoy.`;
+      timeLbl.textContent = "¿A qué hora llegarás?";
+      reasonLbl.textContent = "¿Por qué no asistirás?";
+    } else {
+      q.textContent = "¿Entrenaste hoy?";
+      st.textContent = "Cuéntale a tu coach cómo te fue hoy.";
+      timeLbl.textContent = "¿A qué hora entrenaste?";
+      reasonLbl.textContent = "¿Por qué no entrenaste?";
     }
     try {
-      const row = await api.myAttendance(STUDENT.id, tomorrowStr());
-      paintAttendance(!!row);
-    } catch (ex) { console.error("No se pudo consultar la asistencia:", ex); }
+      const row = await api.myAttendance(STUDENT.id, surveyDate);
+      paintAttendance(row);
+    } catch (ex) { console.error("No se pudo consultar la encuesta:", ex); }
   }
-  function paintAttendance(confirmed) {
-    $("#attendanceBtns")?.classList.toggle("hidden", confirmed);
-    $("#attendanceConfirmed")?.classList.toggle("hidden", !confirmed);
+
+  function paintAttendance(row) {
+    const locked = surveyMode === "presencial" && surveyDate <= todayStr();
+    $("#attendanceYesNo")?.classList.toggle("hidden", !!row);
+    $("#attendanceTimeBlock")?.classList.add("hidden");
+    $("#attendanceReasonBlock")?.classList.add("hidden");
+    $("#attendanceLocked")?.classList.add("hidden");
+    const confirmed = $("#attendanceConfirmed");
+    if (row) {
+      confirmed?.classList.remove("hidden");
+      const badge = $("#attendanceConfirmedBadge");
+      if (badge) {
+        if (row.response === "yes") {
+          badge.className = "badge badge--ok";
+          badge.textContent = surveyMode === "presencial" ? `✓ Vas a las ${row.scheduled_time?.slice(0, 5) || "—"}` : `✓ Entrenaste a las ${row.scheduled_time?.slice(0, 5) || "—"}`;
+        } else {
+          badge.className = "badge badge--pend";
+          badge.textContent = "No — " + (row.reason || "sin motivo");
+        }
+      }
+      $("#btnAttendChange")?.classList.toggle("hidden", locked);
+    } else {
+      confirmed?.classList.add("hidden");
+    }
   }
-  $("#btnAttendYes")?.addEventListener("click", async () => {
-    if (!STUDENT?.coach_id) return;
-    const btn = $("#btnAttendYes"); btn.disabled = true;
+  $("#btnAttendYes")?.addEventListener("click", () => {
+    $("#attendanceYesNo")?.classList.add("hidden");
+    $("#attendanceTimeBlock")?.classList.remove("hidden");
+    const slots = buildTimeSlots();
+    wheelApi = initWheelPicker($("#wheelPicker"), slots, slots[4]);
+  });
+  $("#btnAttendNo")?.addEventListener("click", () => {
+    $("#attendanceYesNo")?.classList.add("hidden");
+    $("#attendanceReasonBlock")?.classList.remove("hidden");
+    $("#attendanceReasonInput").value = "";
+    $("#attendanceReasonInput")?.focus();
+  });
+  $("#btnAttendConfirmTime")?.addEventListener("click", async () => {
+    if (!STUDENT?.coach_id || !wheelApi) return;
+    const btn = $("#btnAttendConfirmTime"); btn.disabled = true;
     try {
-      await api.confirmAttendance(STUDENT.id, STUDENT.coach_id, tomorrowStr());
-      paintAttendance(true);
-      toast("¡Tu coach ya sabe que vas mañana! 🔥", "ok");
-    } catch (ex) { errToast(ex, "No se pudo confirmar tu asistencia"); }
+      const row = await api.saveDailySurvey(STUDENT.id, STUDENT.coach_id, surveyDate, { response: "yes", scheduled_time: wheelApi.getValue() });
+      $("#attendanceTimeBlock")?.classList.add("hidden");
+      paintAttendance(row);
+      toast(surveyMode === "presencial" ? "¡Tu coach ya sabe que vas mañana! 🔥" : "¡Buen trabajo! Registrado ✅", "ok");
+    } catch (ex) { errToast(ex, "No se pudo guardar tu respuesta"); }
     finally { btn.disabled = false; }
   });
-  $("#btnAttendCancel")?.addEventListener("click", async () => {
-    const btn = $("#btnAttendCancel"); btn.disabled = true;
+  $("#btnAttendConfirmReason")?.addEventListener("click", async () => {
+    if (!STUDENT?.coach_id) return;
+    const reason = $("#attendanceReasonInput").value.trim();
+    if (!reason) return toast("Escribe el motivo antes de enviar", "info");
+    const btn = $("#btnAttendConfirmReason"); btn.disabled = true;
     try {
-      await api.cancelAttendance(STUDENT.id, tomorrowStr());
-      paintAttendance(false);
-      toast("Cancelaste tu asistencia de mañana", "info");
-    } catch (ex) { errToast(ex, "No se pudo cancelar"); }
+      const row = await api.saveDailySurvey(STUDENT.id, STUDENT.coach_id, surveyDate, { response: "no", reason });
+      $("#attendanceReasonBlock")?.classList.add("hidden");
+      paintAttendance(row);
+      toast("Respuesta enviada a tu coach", "info");
+    } catch (ex) { errToast(ex, "No se pudo enviar tu respuesta"); }
+    finally { btn.disabled = false; }
+  });
+  $("#btnAttendChange")?.addEventListener("click", async () => {
+    const btn = $("#btnAttendChange"); btn.disabled = true;
+    try {
+      await api.cancelAttendance(STUDENT.id, surveyDate);
+      paintAttendance(null);
+    } catch (ex) { errToast(ex, "No se pudo cambiar tu respuesta"); }
     finally { btn.disabled = false; }
   });
 
@@ -483,12 +604,16 @@
   let COACH_FEATURES = api.planFeatures("Free");
   function applyCoachPlan(plan) {
     COACH_FEATURES = api.planFeatures(plan || "Free");
-    $$('[data-anav="comunidad"]').forEach((b) => { b.style.display = COACH_FEATURES.community ? "" : "none"; });
-    $$('[data-anav="chat"]').forEach((b) => { b.style.display = COACH_FEATURES.messages ? "" : "none"; });
+    LOCKED_NAVS.clear();
+    if (!COACH_FEATURES.community) LOCKED_NAVS.add("comunidad");
+    if (!COACH_FEATURES.messages) LOCKED_NAVS.add("chat");
+    $$('[data-anav="comunidad"]').forEach((b) => b.classList.toggle("is-locked", !COACH_FEATURES.community));
+    $$('[data-anav="chat"]').forEach((b) => b.classList.toggle("is-locked", !COACH_FEATURES.messages));
     if (!COACH_FEATURES.community && $("#a-comunidad")?.classList.contains("is-active")) anav("home");
     if (!COACH_FEATURES.messages && $("#a-chat")?.classList.contains("is-active")) anav("home");
-    if (!COACH_FEATURES.attendance) $("#attendanceCard")?.classList.add("hidden");
-    else loadAttendance();
+    // Subida de fotos: Star+. La encuesta diaria es de plan Free, siempre disponible.
+    $("#dropzone")?.classList.toggle("is-locked", !COACH_FEATURES.photos);
+    loadAttendance();
   }
 
   /* Realtime: nuevos mensajes del coach llegan sin recargar */

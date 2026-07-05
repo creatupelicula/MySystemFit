@@ -62,8 +62,8 @@
     routines: "El constructor de rutinas personalizadas",
     community: "La comunidad para tus alumnos",
     messages: "La mensajería con tus alumnos",
-    followups: "Los seguimientos y objetivos",
-    attendance: "El control de asistencia diaria",
+    objectives: "El catálogo de objetivos y su seguimiento",
+    photos: "La subida de fotos de progreso",
   };
   function viewLocked(view) {
     const feat = VIEW_FEATURE[view];
@@ -274,7 +274,7 @@
 
   /* ---------- Drawer ficha alumno ---------- */
   // Pestañas de la ficha que requieren plan de pago (en Free solo Info/Pagos/Notas)
-  const TAB_FEATURE = { rutina: "routines", progreso: "routines", segui: "followups" };
+  const TAB_FEATURE = { rutina: "routines", progreso: "routines" };
   const drawer = $("#studentDrawer");
   const overlay = $("#drawerOverlay");
   async function openDrawer(id) {
@@ -1237,9 +1237,9 @@
       // Si el coach baja de plan estando dentro de una vista bloqueada, sale de ella.
       if (!FEATURES[feat] && $("#view-" + view)?.classList.contains("is-active")) goTo("dashboard");
     });
-    // Tarjetas del dashboard que dependen del plan (bloqueadas, no ocultas)
-    setCardLocked($("#followUpsList")?.closest(".card"), "followups", !FEATURES.followups);
-    setCardLocked($("#attendanceToday")?.closest(".card"), "attendance", !FEATURES.attendance);
+    // Objetivos: catálogo (Ajustes) y asignación (ficha del alumno) — Star+
+    setCardLocked($("#objectivesCardCoach"), "objectives", !FEATURES.objectives);
+    setCardLocked($("#dwObjectives")?.closest(".card"), "objectives", !FEATURES.objectives);
     // Pestañas de la ficha del alumno: en Free solo Información, Pagos y Notas
     Object.entries(TAB_FEATURE).forEach(([tab, feat]) => {
       const t = $(`#dwTabs .tab[data-tab="${tab}"]`);
@@ -1261,10 +1261,10 @@
     const limit = api.planLimit(plan);
     $("#planName") && ($("#planName").textContent = plan);
     const desc = plan === "Free"
-      ? `Hasta ${limit} alumnos · Dashboard, alumnos, pagos y ajustes`
+      ? `Hasta ${limit} alumnos · Dashboard, alumnos, pagos, referidos y ajustes`
       : FEATURES.routines
-        ? `Hasta ${limit} alumnos · Todo incluido: rutinas, comunidad, mensajes`
-        : `Hasta ${limit} alumnos · Mensajes, seguimientos y asistencia`;
+        ? `Hasta ${limit} alumnos · Acceso total: mensajes, objetivos, fotos, rutinas y comunidad`
+        : `Hasta ${limit} alumnos · Mensajes, objetivos y fotos de progreso`;
     $("#planDesc") && ($("#planDesc").textContent = desc);
     $("#planUsage") && ($("#planUsage").textContent = `${STUDENTS.length}/${limit}`);
     $("#planUsageBar") && ($("#planUsageBar").style.width = Math.min(100, (STUDENTS.length / limit) * 100) + "%");
@@ -1419,31 +1419,67 @@
     catch { toast(code, "Cópialo manualmente", "info"); }
   });
 
-  /* ---------- Asistencia confirmada (lista del ciclo actual) ----------
-     Muestra los alumnos que confirmaron asistencia. La lista persiste entre
-     días hasta que el coach pulsa "Reiniciar Día". */
+  /* ---------- Encuesta diaria (lista del ciclo actual) ----------
+     Muestra a quién asistirá mañana (presencial), quién entrenó hoy (online),
+     horario elegido o motivo de ausencia. Persiste hasta "Reiniciar Día". */
+  let ATTENDANCE_ROWS = [];
+  let attFilter = { text: "", mode: "all", resp: "all", sort: "time" };
+  function renderAttendanceList() {
+    const wrap = $("#attendanceToday");
+    const statsWrap = $("#attStats");
+    if (!wrap) return;
+    if (!ATTENDANCE_ROWS.length) {
+      wrap.innerHTML = `<p class="t3 text-sm">Aún nadie ha respondido la encuesta de hoy. Cuando tus alumnos respondan, aparecerán aquí.</p>`;
+      $("#attendanceSummary") && ($("#attendanceSummary").textContent = "");
+      if (statsWrap) statsWrap.innerHTML = "";
+      return;
+    }
+    const yes = ATTENDANCE_ROWS.filter((r) => r.response === "yes").length;
+    const no = ATTENDANCE_ROWS.length - yes;
+    $("#attendanceSummary") && ($("#attendanceSummary").textContent = `${ATTENDANCE_ROWS.length} respuesta${ATTENDANCE_ROWS.length === 1 ? "" : "s"}`);
+    if (statsWrap) statsWrap.innerHTML = `
+      <span class="badge badge--ok">✓ ${yes} sí</span>
+      <span class="badge badge--late">✕ ${no} no</span>`;
+
+    let list = ATTENDANCE_ROWS.filter((r) => {
+      const s = r.students || {};
+      if (attFilter.text && !s.full_name?.toLowerCase().includes(attFilter.text.toLowerCase())) return false;
+      if (attFilter.mode !== "all" && s.training_type !== attFilter.mode) return false;
+      if (attFilter.resp !== "all" && r.response !== attFilter.resp) return false;
+      return true;
+    });
+    list = list.slice().sort((a, b) => {
+      if (attFilter.sort === "name") return (a.students?.full_name || "").localeCompare(b.students?.full_name || "");
+      return (a.scheduled_time || "99:99").localeCompare(b.scheduled_time || "99:99");
+    });
+
+    if (!list.length) { wrap.innerHTML = `<p class="t3 text-sm">Sin resultados para este filtro.</p>`; return; }
+    wrap.innerHTML = list.map((r) => {
+      const s = r.students || {};
+      const isPresencial = s.training_type === "Presencial";
+      const day = new Date(r.attend_date + "T00:00:00").toLocaleDateString("es-MX", { weekday: "short", day: "numeric", month: "short" });
+      const sub = r.response === "yes"
+        ? `${isPresencial ? "Asistirá" : "Entrenó"} · ${r.scheduled_time ? r.scheduled_time.slice(0, 5) : "—"} · ${api.esc(day)}`
+        : `${isPresencial ? "No asistirá" : "No entrenó"} · ${api.esc(r.reason || "sin motivo")}`;
+      return `<div class="due-row">
+        <div class="avatar avatar--sm">${api.initials(s.full_name)}</div>
+        <div class="due-row__meta"><div class="due-row__name">${api.esc(s.full_name || "Alumno")} <span class="t3 fs-13">· ${isPresencial ? "Presencial" : "Online"}</span></div><div class="due-row__sub">${sub}</div></div>
+        <span class="badge ${r.response === "yes" ? "badge--ok" : "badge--late"}">${r.response === "yes" ? "Sí" : "No"}</span>
+      </div>`;
+    }).join("");
+  }
   async function renderAttendanceToday() {
     const wrap = $("#attendanceToday");
     if (!wrap) return;
     try {
-      const rows = await api.listCoachAttendance();
-      if (!rows.length) {
-        wrap.innerHTML = `<p class="t3 text-sm">Aún nadie ha confirmado asistencia. Cuando tus alumnos confirmen, aparecerán aquí.</p>`;
-        $("#attendanceSummary") && ($("#attendanceSummary").textContent = "");
-        return;
-      }
-      $("#attendanceSummary") && ($("#attendanceSummary").textContent = `${rows.length} confirmado${rows.length === 1 ? "" : "s"}`);
-      wrap.innerHTML = rows.map((r) => {
-        const s = r.students || {};
-        const day = new Date(r.attend_date + "T00:00:00").toLocaleDateString("es-MX", { weekday: "short", day: "numeric", month: "short" });
-        return `<div class="due-row">
-          <div class="avatar avatar--sm">${api.initials(s.full_name)}</div>
-          <div class="due-row__meta"><div class="due-row__name">${api.esc(s.full_name || "Alumno")}</div><div class="due-row__sub">Confirmó para ${api.esc(day)}</div></div>
-          <span class="badge badge--ok">Va</span>
-        </div>`;
-      }).join("");
-    } catch (ex) { wrap.innerHTML = `<p class="t3 text-sm">No se pudo cargar la asistencia.</p>`; }
+      ATTENDANCE_ROWS = await api.listCoachAttendance();
+      renderAttendanceList();
+    } catch (ex) { wrap.innerHTML = `<p class="t3 text-sm">No se pudo cargar la encuesta.</p>`; }
   }
+  $("#attSearch")?.addEventListener("input", (e) => { attFilter.text = e.target.value; renderAttendanceList(); });
+  $("#attFilterMode")?.addEventListener("change", (e) => { attFilter.mode = e.target.value; renderAttendanceList(); });
+  $("#attFilterResp")?.addEventListener("change", (e) => { attFilter.resp = e.target.value; renderAttendanceList(); });
+  $("#attSort")?.addEventListener("change", (e) => { attFilter.sort = e.target.value; renderAttendanceList(); });
   $("#btnResetAttendance")?.addEventListener("click", async () => {
     const btn = $("#btnResetAttendance"); btn.disabled = true;
     try {

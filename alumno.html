@@ -67,19 +67,47 @@
         <button class="btn btn--lime btn--block mt-4 hidden" id="renewBtn"></button>
       </div>
 
-      <!-- Asistencia de mañana (solo presencial) -->
+      <!-- Encuesta diaria: presencial (¿asistirás mañana?) u online (¿entrenaste hoy?) -->
+      <style>
+        .wheel-picker{position:relative;height:180px;overflow-y:auto;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;border-radius:12px;background:var(--bg-base);mask-image:linear-gradient(to bottom, transparent 0, #000 25%, #000 75%, transparent 100%)}
+        .wheel-picker::-webkit-scrollbar{display:none}
+        .wheel-picker__pad{height:72px;flex-shrink:0;scroll-snap-align:none}
+        .wheel-picker__item{height:36px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:16px;color:var(--text-3);scroll-snap-align:center;transition:opacity .15s,transform .15s}
+        .wheel-picker__item.is-center{color:var(--text-1);font-weight:700;font-size:20px;transform:scale(1.05)}
+        .wheel-picker__frame{position:absolute;left:0;right:0;top:72px;height:36px;pointer-events:none;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+        /* Funciones bloqueadas por el plan del coach: visibles pero atenuadas (nunca ocultas). */
+        .a-nav button.is-locked, .chat-fab.is-locked{opacity:.4}
+        #dropzone.is-locked{opacity:.45;cursor:not-allowed}
+      </style>
       <div class="card mt-4 hidden" id="attendanceCard">
-        <div class="section-title" style="margin-bottom:4px">¿Vas a entrenar mañana?</div>
-        <p class="t3 text-sm mb-4" id="attendanceStatus">Confirma tu asistencia para <b id="attendanceDayLabel">mañana</b>. Puedes cambiarla hasta las 11:59 PM de hoy.</p>
-        <div class="row gap-3" id="attendanceBtns">
-          <button class="btn btn--lime" id="btnAttendYes" style="flex:1">Confirmar asistencia 💪</button>
+        <div class="section-title" style="margin-bottom:4px" id="attendanceQuestion">¿Vas a entrenar mañana?</div>
+        <p class="t3 text-sm mb-4" id="attendanceStatus"></p>
+
+        <div class="row gap-3" id="attendanceYesNo">
+          <button class="btn btn--lime" id="btnAttendYes" style="flex:1">Sí</button>
+          <button class="btn btn--ghost" id="btnAttendNo" style="flex:1">No</button>
         </div>
+
+        <div class="hidden mt-4" id="attendanceTimeBlock">
+          <p class="t3 text-sm mb-2" id="attendanceTimeLabel">¿A qué hora?</p>
+          <div class="wheel-picker" id="wheelPicker">
+            <div class="wheel-picker__frame"></div>
+          </div>
+          <button class="btn btn--lime btn--block mt-4" id="btnAttendConfirmTime">Confirmar</button>
+        </div>
+
+        <div class="hidden mt-4" id="attendanceReasonBlock">
+          <p class="t3 text-sm mb-2" id="attendanceReasonLabel">¿Por qué no?</p>
+          <textarea class="input" id="attendanceReasonInput" style="min-height:80px;resize:vertical" placeholder="Escribe el motivo…" maxlength="300"></textarea>
+          <button class="btn btn--primary btn--block mt-4" id="btnAttendConfirmReason">Enviar</button>
+        </div>
+
         <div class="hidden" id="attendanceConfirmed">
-          <div class="badge badge--ok" style="width:100%;justify-content:center;height:40px">✓ Confirmado para mañana</div>
-          <button class="btn btn--ghost btn--block mt-4" id="btnAttendCancel">Cancelar asistencia</button>
+          <div class="badge badge--ok" style="width:100%;justify-content:center;height:40px" id="attendanceConfirmedBadge">✓ Confirmado</div>
+          <button class="btn btn--ghost btn--block mt-4" id="btnAttendChange">Cambiar respuesta</button>
         </div>
         <div class="hidden" id="attendanceLocked">
-          <p class="t3 text-sm">Ya no puedes cambiar tu asistencia de mañana. Vuelve más tarde para confirmar el día siguiente.</p>
+          <p class="t3 text-sm">Ya no puedes cambiar tu respuesta de hoy. Vuelve mañana.</p>
         </div>
       </div>
 
