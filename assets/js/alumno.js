@@ -25,6 +25,19 @@
     toast(fallback + (extra ? ": " + extra : ""), "info");
   }
 
+  /* Cerrar sesión (a nivel superior: funciona aunque init termine antes) */
+  async function doLogout() {
+    try { await window.msfSupabase?.auth.signOut(); } catch (_) {}
+    try {
+      localStorage.removeItem("msf_pending_coach");
+      localStorage.removeItem("msf_oauth_role");
+    } catch (_) {}
+    window.location.href = "login.html";
+  }
+  document.addEventListener("click", (e) => {
+    if (e.target.closest("#aLogout")) { e.preventDefault(); doLogout(); }
+  });
+
   /* Navegación bottom nav */
   function anav(view) {
     $$(".a-view").forEach((v) => v.classList.remove("is-active"));
@@ -279,6 +292,7 @@
   async function loadAttendance() {
     const card = $("#attendanceCard");
     if (!card || !STUDENT || STUDENT.training_type !== "Presencial") return;
+    if (!COACH_FEATURES.attendance) { card.classList.add("hidden"); return; }
     card.classList.remove("hidden");
     const label = $("#attendanceDayLabel");
     if (label) {
@@ -462,6 +476,21 @@
     } catch (ex) { errToast(ex, "No se pudo enviar el mensaje"); }
   });
 
+  /* ---------- Herencia del plan del coach ----------
+     El alumno NUNCA tiene plan propio: hereda las capacidades del plan de su
+     coach. Nunca ve precios, upgrades ni pagos del sistema. Si el coach sube
+     o baja de plan, esto se resincroniza en tiempo real. */
+  let COACH_FEATURES = api.planFeatures("Free");
+  function applyCoachPlan(plan) {
+    COACH_FEATURES = api.planFeatures(plan || "Free");
+    $$('[data-anav="comunidad"]').forEach((b) => { b.style.display = COACH_FEATURES.community ? "" : "none"; });
+    $$('[data-anav="chat"]').forEach((b) => { b.style.display = COACH_FEATURES.messages ? "" : "none"; });
+    if (!COACH_FEATURES.community && $("#a-comunidad")?.classList.contains("is-active")) anav("home");
+    if (!COACH_FEATURES.messages && $("#a-chat")?.classList.contains("is-active")) anav("home");
+    if (!COACH_FEATURES.attendance) $("#attendanceCard")?.classList.add("hidden");
+    else loadAttendance();
+  }
+
   /* Realtime: nuevos mensajes del coach llegan sin recargar */
   function subscribeRealtime() {
     if (!STUDENT || !window.msfSupabase) return;
@@ -493,6 +522,14 @@
         { event: "*", schema: "public", table: "community_comments" },
         () => { if ($("#a-comunidad")?.classList.contains("is-active")) renderCommunity(); })
       .subscribe();
+    // Si el coach cambia de plan, los permisos heredados cambian al instante
+    // (canal dedicado: los filtros de profiles son más fiables aislados).
+    window.msfSupabase
+      .channel("alumno-plan-" + STUDENT.id)
+      .on("postgres_changes",
+        { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${PROFILE.coach_id}` },
+        (payload) => { if (payload.new?.plan) applyCoachPlan(payload.new.plan); })
+      .subscribe();
   }
 
   /* ---------- Init ---------- */
@@ -522,33 +559,55 @@
     catch (ex) { btn.disabled = false; errToast(ex, "No se pudo actualizar"); }
   });
 
-  /* ---------- Onboarding de objetivos (una sola vez) ---------- */
-  function maybeShowOnboarding() {
+  /* ---------- Onboarding inicial (una sola vez) ----------
+     Campos obligatorios: objetivo, edad, sexo, peso, altura, peso meta,
+     experiencia y frecuencia. La BD los vuelve a validar (backend). */
+  async function maybeShowOnboarding() {
     if (!STUDENT || STUDENT.onboarding_completed_at) return;
     const overlay = $("#onboarding");
     if (!overlay) return;
 
     const answers = {};
     let step = 1;
-    const TOTAL = 7;
+    const TOTAL = 9;
     const stepEl = (n) => overlay.querySelector(`.ob-step[data-step="${n}"]`);
     const bar = $("#obBar"), stepNum = $("#obStepNum"),
           backBtn = $("#obBack"), nextBtn = $("#obNext"), errEl = $("#obError");
 
+    // Paso 1: objetivos del catálogo del coach, o pregunta abierta si no hay.
+    let goalIsFree = false;
+    const choicesBox = $("#obGoalChoices");
+    try {
+      const catalog = (await api.listObjectives(PROFILE.coach_id)).filter((o) => o.active !== false);
+      if (catalog.length) {
+        choicesBox.innerHTML = catalog.map((o) =>
+          `<div class="ob-choice" data-value="${api.esc(o.title)}"><span class="ob-choice__emoji">🎯</span><div><div class="ob-choice__t">${api.esc(o.title)}</div>${o.description ? `<div class="ob-choice__s">${api.esc(o.description)}</div>` : ""}</div></div>`
+        ).join("");
+      } else { goalIsFree = true; }
+    } catch (_) { goalIsFree = true; }
+    if (goalIsFree) {
+      choicesBox.classList.add("hidden");
+      $("#obGoalFreeWrap").classList.remove("hidden");
+      $("#obGoalHint").textContent = "Tu coach aún no ha configurado objetivos personalizados. Cuéntanos con tus palabras: ¿cuál es tu objetivo?";
+    }
+
     // Prellena con lo que el coach ya tenga cargado
     if (STUDENT.weight_current != null) $("#obWeightCurrent").value = STUDENT.weight_current;
     if (STUDENT.weight_goal != null) $("#obWeightGoal").value = STUDENT.weight_goal;
+    if (STUDENT.height != null) $("#obHeight").value = STUDENT.height;
+    if (STUDENT.age != null) $("#obAge").value = STUDENT.age;
 
-    // Selección en tarjetas / botones de opción única
+    // Selección en tarjetas / botones de opción única (delegado: soporta
+    // también las opciones del catálogo renderizadas arriba)
     overlay.querySelectorAll("[data-single]").forEach((group) => {
       const field = group.getAttribute("data-field");
-      group.querySelectorAll("[data-value]").forEach((opt) => {
-        opt.addEventListener("click", () => {
-          group.querySelectorAll("[data-value]").forEach((o) => o.classList.remove("sel"));
-          opt.classList.add("sel");
-          answers[field] = opt.getAttribute("data-value");
-          errEl.style.display = "none";
-        });
+      group.addEventListener("click", (e) => {
+        const opt = e.target.closest("[data-value]");
+        if (!opt || !group.contains(opt)) return;
+        group.querySelectorAll("[data-value]").forEach((o) => o.classList.remove("sel"));
+        opt.classList.add("sel");
+        answers[field] = opt.getAttribute("data-value");
+        errEl.style.display = "none";
       });
     });
 
@@ -562,26 +621,41 @@
       errEl.style.display = "none";
     }
     function fail(msg) { errEl.textContent = msg; errEl.style.display = "block"; return false; }
+    function goalValue() {
+      return goalIsFree ? $("#obGoalText").value.trim() : (answers.goal || "");
+    }
     function validate() {
-      if (step === 1 && !answers.goal) return fail("Elige tu objetivo principal.");
+      if (step === 1 && !goalValue()) return fail(goalIsFree ? "Escribe cuál es tu objetivo." : "Elige tu objetivo.");
       if (step === 2) {
+        const v = parseInt($("#obAge").value, 10);
+        if (!(v >= 10 && v <= 100)) return fail("Escribe tu edad (entre 10 y 100 años).");
+      }
+      if (step === 3 && !answers.sex) return fail("Elige una opción.");
+      if (step === 4) {
         const v = parseFloat($("#obWeightCurrent").value);
-        if (!(v >= 20 && v <= 400)) return fail("Escribe un peso válido (kg).");
+        if (!(v >= 25 && v <= 350)) return fail("Escribe un peso válido (kg).");
       }
-      if (step === 3) {
+      if (step === 5) {
+        const v = parseFloat($("#obHeight").value);
+        if (!(v >= 100 && v <= 250)) return fail("Escribe tu altura en centímetros (100-250).");
+      }
+      if (step === 6) {
         const v = parseFloat($("#obWeightGoal").value);
-        if (!(v >= 20 && v <= 400)) return fail("Escribe tu peso objetivo (kg).");
+        if (!(v >= 25 && v <= 350)) return fail("Escribe tu peso objetivo (kg).");
       }
-      if (step === 4 && !answers.experience_level) return fail("Elige tu nivel de experiencia.");
-      if (step === 5 && !answers.training_frequency) return fail("Elige cuántos días quieres entrenar.");
-      // pasos 6 y 7 son opcionales
+      if (step === 7 && !answers.experience_level) return fail("Elige tu nivel de experiencia.");
+      if (step === 8 && !answers.training_frequency) return fail("Elige cuántos días quieres entrenar.");
+      // paso 9 es opcional
       return true;
     }
     async function finish() {
       nextBtn.disabled = true; nextBtn.textContent = "Guardando…";
       try {
         await api.saveOnboarding({
-          goal: answers.goal,
+          goal: goalValue(),
+          age: parseInt($("#obAge").value, 10),
+          sex: answers.sex,
+          height: parseFloat($("#obHeight").value),
           weight_current: parseFloat($("#obWeightCurrent").value),
           weight_goal: parseFloat($("#obWeightGoal").value),
           experience: answers.experience_level,
@@ -591,11 +665,15 @@
           motivation: $("#obMotivation").value.trim(),
         });
         STUDENT.onboarding_completed_at = new Date().toISOString();
-        STUDENT.goal = answers.goal;
+        STUDENT.goal = goalValue();
+        STUDENT.age = parseInt($("#obAge").value, 10);
+        STUDENT.sex = answers.sex;
+        STUDENT.height = parseFloat($("#obHeight").value);
         STUDENT.weight_current = parseFloat($("#obWeightCurrent").value);
         STUDENT.weight_goal = parseFloat($("#obWeightGoal").value);
         overlay.classList.add("hidden");
         paintHome();
+        loadMyObjectives();
         toast("¡Listo! Tu coach ya tiene tus objetivos 🎯", "ok");
       } catch (ex) {
         nextBtn.disabled = false; nextBtn.textContent = "Terminar 🚀";
@@ -629,17 +707,20 @@
       .maybeSingle();
     if (!error && student) STUDENT = student;
 
-    // Perfil del coach: nombre real en el chat + gating de comunidad según su plan
+    // Perfil del coach: nombre real en el chat + herencia de su plan
     try {
       const { data: coach } = await window.msfSupabase
         .from("profiles").select("full_name, plan").eq("id", PROFILE.coach_id).maybeSingle();
       if (coach) {
         $("#chatCoachName") && ($("#chatCoachName").textContent = coach.full_name);
-        if (!api.planFeatures(coach.plan).community) {
-          $$('[data-anav="comunidad"]').forEach((b) => b.remove());
-        }
+        applyCoachPlan(coach.plan);
+      } else {
+        applyCoachPlan(await api.myCoachPlan());
       }
-    } catch (ex) { console.error("No se pudo cargar el perfil del coach:", ex); }
+    } catch (ex) {
+      console.error("No se pudo cargar el perfil del coach:", ex);
+      try { applyCoachPlan(await api.myCoachPlan()); } catch (_) {}
+    }
 
     maybeShowOnboarding();
     loadMyObjectives();

@@ -25,7 +25,7 @@ module.exports = async function handler(req, res) {
     }
 
     const base = siteUrl(req);
-    const session = await sk.checkout.sessions.create({
+    const common = {
       mode: "subscription",
       customer: customerId,
       line_items: [{ price, quantity: 1 }],
@@ -33,6 +33,23 @@ module.exports = async function handler(req, res) {
       subscription_data: { metadata: { coach_id: user.id, plan } },
       allow_promotion_codes: true,
       locale: "es",
+    };
+
+    // Checkout embebido: el pago ocurre dentro de la app (modal), sin
+    // abandonar la experiencia. Requiere STRIPE_PUBLISHABLE_KEY configurada.
+    const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY;
+    if (publishableKey) {
+      const session = await sk.checkout.sessions.create({
+        ...common,
+        ui_mode: "embedded",
+        return_url: `${base}/index.html?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+      });
+      return res.status(200).json({ client_secret: session.client_secret, publishable_key: publishableKey });
+    }
+
+    // Respaldo: checkout alojado (redirección) si aún no hay clave publicable.
+    const session = await sk.checkout.sessions.create({
+      ...common,
       success_url: `${base}/index.html?checkout=success`,
       cancel_url: `${base}/index.html?checkout=cancel`,
     });

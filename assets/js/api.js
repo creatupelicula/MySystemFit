@@ -26,17 +26,25 @@ window.msfApi = (function () {
     return ""; // sin traducción conocida: el llamador muestra solo su mensaje base
   }
 
-  /* ---------- Planes ---------- */
-  const PLAN_LIMITS = { "Star": 30, "Star Plus": 100, "Kings": 500 };
-  // Qué features incluye cada plan; la UI se bloquea con esto y la BD
-  // respalda el límite de alumnos con su propio trigger.
+  /* ---------- Planes ----------
+     Sistema central de permisos. El coach contrata el plan; el alumno SIEMPRE
+     hereda las capacidades del plan de su coach (nunca tiene plan propio).
+     La UI se bloquea con estos flags y la BD respalda el límite con trigger. */
+  const PLAN_LIMITS = { "Free": 30, "Star": 100, "Star Plus": 300, "Kings": 500 };
   const PLAN_FEATURES = {
-    "Star": { routines: false, community: false, ai: false },
-    "Star Plus": { routines: true, community: true, ai: false },
-    "Kings": { routines: true, community: true, ai: true },
+    "Free":      { messages: false, followups: false, routines: false, community: false, attendance: false, ai: false },
+    "Star":      { messages: true,  followups: true,  routines: false, community: false, attendance: true,  ai: false },
+    "Star Plus": { messages: true,  followups: true,  routines: true,  community: true,  attendance: true,  ai: false },
+    "Kings":     { messages: true,  followups: true,  routines: true,  community: true,  attendance: true,  ai: true },
   };
-  function planLimit(plan) { return PLAN_LIMITS[plan] ?? PLAN_LIMITS["Star"]; }
-  function planFeatures(plan) { return PLAN_FEATURES[plan] ?? PLAN_FEATURES["Star"]; }
+  function planLimit(plan) { return PLAN_LIMITS[plan] ?? PLAN_LIMITS["Free"]; }
+  function planFeatures(plan) { return PLAN_FEATURES[plan] ?? PLAN_FEATURES["Free"]; }
+  // Plan efectivo del usuario actual: el suyo si es coach, el de su coach si es alumno.
+  async function myCoachPlan() {
+    const { data, error } = await sb().rpc("my_coach_plan");
+    if (error) throw error;
+    return data || "Free";
+  }
   async function countStudents(coachId) {
     const { count, error } = await sb().from("students").select("id", { count: "exact", head: true }).eq("coach_id", coachId);
     if (error) throw error;
@@ -69,7 +77,7 @@ window.msfApi = (function () {
     ]);
     const limit = planLimit(prof?.plan);
     if (current >= limit) {
-      const err = new Error(`Tu plan ${prof?.plan || "Star"} permite máximo ${limit} alumnos. Mejora tu plan para agregar más.`);
+      const err = new Error(`Tu plan ${prof?.plan || "Free"} permite máximo ${limit} alumnos. Actualiza tu plan para seguir creciendo.`);
       err._planLimit = true;
       throw err;
     }
@@ -97,7 +105,7 @@ window.msfApi = (function () {
       private_notes: data.private_notes || null,
       member_since: data.member_since || null,
       membership_end: data.membership_end || null,
-      state: data.state || "pend",
+      state: data.state || "pendiente",
     };
     const { data: student, error } = await sb().from("students").insert(payload).select().single();
     if (error) throw error;
@@ -110,8 +118,8 @@ window.msfApi = (function () {
         concept: "Membresía",
         amount: Number(data.payment_amount),
         due_date: data.membership_end || new Date().toISOString().slice(0, 10),
-        state: data.state === "ok" ? "ok" : "pend",
-        paid_at: data.state === "ok" ? new Date().toISOString() : null,
+        state: data.pay_state === "ok" ? "ok" : "pend",
+        paid_at: data.pay_state === "ok" ? new Date().toISOString() : null,
       });
     }
     return { ...student, initials: initials(student.full_name) };
@@ -366,9 +374,13 @@ window.msfApi = (function () {
   }
 
   // Guarda el onboarding del alumno (una sola vez) vía RPC segura.
+  // La BD valida los campos obligatorios (edad, sexo, altura, peso, objetivo…).
   async function saveOnboarding(a) {
     const { error } = await sb().rpc("save_onboarding", {
       p_goal: a.goal,
+      p_age: a.age ?? null,
+      p_sex: a.sex ?? null,
+      p_height: a.height ?? null,
       p_weight_current: a.weight_current ?? null,
       p_weight_goal: a.weight_goal ?? null,
       p_experience: a.experience ?? null,
@@ -473,7 +485,7 @@ window.msfApi = (function () {
 
   return {
     initials, esc, friendlyError,
-    planLimit, planFeatures, countStudents,
+    planLimit, planFeatures, myCoachPlan, countStudents,
     getReferralInfo,
     confirmAttendance, cancelAttendance, myAttendance, listCoachAttendance, resetAttendanceDay, listMyAttendance,
     saveOnboarding,

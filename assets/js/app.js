@@ -16,8 +16,14 @@
   let CURRENT_STUDENT_ID = null; // alumno activo en drawer / builder de rutinas
   let studentFilter = { text: "", type: "all", state: "all" };
 
+  // Estados de PAGOS (ok/pend/late) — no confundir con estados del alumno
   const badgeClass = { ok: "badge--ok", pend: "badge--pend", late: "badge--late" };
   const stateLabel = { ok: "Activa", pend: "Pendiente", late: "Atrasada" };
+  // Estados del ALUMNO: pendiente/activo/suspendido/inactivo/cancelado
+  const S_BADGE = { activo: "badge--ok", pendiente: "badge--pend", suspendido: "badge--pend", inactivo: "badge--late", cancelado: "badge--late" };
+  const S_LABEL = { activo: "Activo", pendiente: "Pendiente", suspendido: "Suspendido", inactivo: "Inactivo", cancelado: "Cancelado" };
+  const sBadge = (st) => S_BADGE[st] || "badge--pend";
+  const sLabel = (st) => S_LABEL[st] || "Pendiente";
 
   /* ---------- Toast ---------- */
   const icons = {
@@ -50,17 +56,27 @@
     referidos: ["Referidos", "Tu código y tu red de coaches"],
     ajustes: ["Ajustes", "Tu cuenta y preferencias"],
   };
-  /* Vistas que dependen del plan del coach */
-  const VIEW_FEATURE = { rutinas: "routines", comunidad: "community" };
+  /* Vistas que dependen del plan del coach (sistema central de permisos) */
+  const VIEW_FEATURE = { rutinas: "routines", comunidad: "community", mensajes: "messages" };
+  const FEATURE_NAME = {
+    routines: "El constructor de rutinas personalizadas",
+    community: "La comunidad para tus alumnos",
+    messages: "La mensajería con tus alumnos",
+    followups: "Los seguimientos y objetivos",
+    attendance: "El control de asistencia diaria",
+  };
   function viewLocked(view) {
     const feat = VIEW_FEATURE[view];
     return feat && FEATURES && !FEATURES[feat];
   }
+  function showUpsell(feat) {
+    $("#upsellTitle") && ($("#upsellTitle").textContent = "Función premium");
+    $("#upsellText") && ($("#upsellText").textContent = `${FEATURE_NAME[feat] || "Esta función"} forma parte de un plan superior. Actualiza tu plan para desbloquearla.`);
+    $("#modal-upsell")?.classList.add("is-open");
+  }
   function goTo(view) {
     if (viewLocked(view)) {
-      const what = view === "rutinas" ? "El constructor de rutinas personalizadas" : "La comunidad para tus alumnos";
-      $("#upsellText") && ($("#upsellText").textContent = `${what} forma parte del plan Star Plus. Mejora tu plan para desbloquearlo.`);
-      $("#modal-upsell")?.classList.add("is-open");
+      showUpsell(VIEW_FEATURE[view]);
       return;
     }
     $$(".view").forEach((v) => v.classList.remove("is-active"));
@@ -123,7 +139,11 @@
     return STUDENTS.filter((s) => {
       if (studentFilter.text && !s.full_name.toLowerCase().includes(studentFilter.text.toLowerCase())) return false;
       if (studentFilter.type !== "all" && s.training_type !== studentFilter.type) return false;
-      if (studentFilter.state !== "all" && s.state !== studentFilter.state) return false;
+      if (studentFilter.state === "late") {
+        // "Atrasados" = alumnos con algún pago vencido sin cobrar
+        const now = new Date(new Date().toDateString());
+        if (!PAYMENTS.some((p) => p.student_id === s.id && p.state !== "ok" && new Date(p.due_date) < now)) return false;
+      } else if (studentFilter.state !== "all" && s.state !== studentFilter.state) return false;
       return true;
     });
   }
@@ -145,7 +165,7 @@
       return `
       <tr data-student="${s.id}" style="cursor:pointer">
         <td><div class="cell-user"><div class="avatar avatar--sm">${s.initials}</div><div><div class="cell-user__name">${api.esc(s.full_name)}</div><div class="cell-user__sub">${s.age ? s.age + " años" : "—"}</div></div></div></td>
-        <td><span class="badge ${badgeClass[s.state]}">${stateLabel[s.state]}</span></td>
+        <td><span class="badge ${sBadge(s.state)}">${sLabel(s.state)}</span></td>
         <td>${api.esc(s.training_type)}</td>
         <td class="muted">${api.esc(s.goal || "—")}</td>
         <td><span style="color:var(--${due.tone === "t3" ? "text-3" : due.tone});font-family:var(--font-mono);font-size:13px">${due.text}</span></td>
@@ -162,7 +182,7 @@
       return `
       <div class="card card--hover student-card" data-student="${s.id}" style="cursor:pointer">
         <div class="student-card__head"><div class="avatar avatar--md">${s.initials}</div><div><div class="student-card__name">${api.esc(s.full_name)}</div><div class="student-card__sub">${s.age ? s.age + " años · " : ""}${api.esc(s.training_type)}</div></div></div>
-        <div style="margin-bottom:12px"><span class="badge ${badgeClass[s.state]}">${stateLabel[s.state]}</span></div>
+        <div style="margin-bottom:12px"><span class="badge ${sBadge(s.state)}">${sLabel(s.state)}</span></div>
         <div class="student-card__rows">
           <div class="kv"><span>Objetivo</span><span>${api.esc(s.goal || "—")}</span></div>
           <div class="kv"><span>Próximo pago</span><span style="color:var(--${due.tone === "t3" ? "text-2" : due.tone})">${due.text}</span></div>
@@ -173,7 +193,7 @@
 
     const head = $(".page-head p");
     if (head && $("#view-alumnos").classList.contains("is-active")) {
-      const active = STUDENTS.filter((s) => s.state === "ok").length;
+      const active = STUDENTS.filter((s) => s.state === "activo").length;
       const pend = PAYMENTS.filter((p) => p.state !== "ok").length;
       const headP = $("#view-alumnos .page-head p");
       if (headP) headP.textContent = `${active} activos · ${pend} pendientes de pago`;
@@ -244,7 +264,7 @@
       arr.forEach((p) => p.classList.remove("is-active"));
       pill.classList.add("is-active");
       const txt = pill.textContent.trim();
-      const map = { "Todos": ["all", "all"], "Online": ["Online", "all"], "Presencial": ["Presencial", "all"], "Activos": ["all", "ok"], "Pendientes": ["all", "pend"], "Atrasados": ["all", "late"] };
+      const map = { "Todos": ["all", "all"], "Online": ["Online", "all"], "Presencial": ["Presencial", "all"], "Activos": ["all", "activo"], "Pendientes": ["all", "pendiente"], "Atrasados": ["all", "late"] };
       const key = Object.keys(map).find((k) => txt.includes(k)) || "Todos";
       studentFilter.type = map[key][0];
       studentFilter.state = map[key][1];
@@ -253,6 +273,8 @@
   });
 
   /* ---------- Drawer ficha alumno ---------- */
+  // Pestañas de la ficha que requieren plan de pago (en Free solo Info/Pagos/Notas)
+  const TAB_FEATURE = { rutina: "routines", progreso: "routines", segui: "followups" };
   const drawer = $("#studentDrawer");
   const overlay = $("#drawerOverlay");
   async function openDrawer(id) {
@@ -262,8 +284,11 @@
     $("#dwAvatar").textContent = s.initials;
     $("#dwName").textContent = s.full_name;
     const st = $("#dwState");
-    st.className = "badge " + badgeClass[s.state];
-    st.textContent = stateLabel[s.state];
+    st.className = "badge " + sBadge(s.state);
+    st.textContent = sLabel(s.state);
+    $("#dwAgeBadge") && ($("#dwAgeBadge").textContent = s.age ? s.age + " años" : "Edad —");
+    $("#dwAge") && ($("#dwAge").textContent = s.age ?? "—");
+    $("#dwSex") && ($("#dwSex").textContent = s.sex || "—");
     $("#dwGoal") && ($("#dwGoal").textContent = s.goal || "—");
     $("#dwType") && ($("#dwType").textContent = s.training_type);
     $("#dwWeight") && ($("#dwWeight").textContent = s.weight_current ?? "—");
@@ -378,6 +403,7 @@
     $("#nsName").value = s.full_name || "";
     $("#nsPhone").value = s.phone || "";
     $("#nsType").value = s.training_type || "Online";
+    $("#nsState") && ($("#nsState").value = s.state || "pendiente");
     if (s.goal) $("#nsGoal").value = s.goal;
     $("#nsWeight").value = s.weight_current ?? "";
     $("#nsWeightGoal").value = s.weight_goal ?? "";
@@ -397,7 +423,11 @@
   overlay?.addEventListener("click", closeDrawer);
   document.addEventListener("click", (e) => {
     const row = e.target.closest("[data-student]");
-    if (row && !row.classList.contains("js-msg-student")) { openDrawer(row.dataset.student); }
+    // La ficha SOLO se abre desde la lista de alumnos o su botón dedicado;
+    // nunca desde una conversación de Mensajes.
+    if (row && !row.classList.contains("js-msg-student") && !row.closest(".js-conversation") && !row.closest("#view-mensajes")) {
+      openDrawer(row.dataset.student);
+    }
   });
   $("#dwNotes")?.addEventListener("blur", async (e) => {
     if (!CURRENT_STUDENT_ID) return;
@@ -410,6 +440,10 @@
   $("#dwTabs")?.addEventListener("click", (e) => {
     const t = e.target.closest(".tab");
     if (!t) return;
+    if (t.dataset.locked === "1") {
+      showUpsell(TAB_FEATURE[t.dataset.tab]);
+      return;
+    }
     $$("#dwTabs .tab").forEach((x) => x.classList.remove("is-active"));
     t.classList.add("is-active");
     $$(".drawer__body .tab-panel").forEach((p) => p.classList.toggle("is-active", p.dataset.panel === t.dataset.tab));
@@ -466,6 +500,7 @@
           full_name: name,
           phone: $("#nsPhone").value.trim() || null,
           training_type: $("#nsType").value,
+          state: $("#nsState")?.value || "pendiente",
           goal: $("#nsGoal").value,
           weight_current: num($("#nsWeight").value),
           weight_goal: num($("#nsWeightGoal").value),
@@ -496,7 +531,8 @@
         member_since: $("#nsStart").value || null,
         membership_end: $("#nsEnd").value || null,
         payment_amount: num($("#nsAmount").value),
-        state: $("#nsPayState").value,
+        state: $("#nsState")?.value || "pendiente",
+        pay_state: $("#nsPayState").value,
         private_notes: $("#nsNotes").value.trim(),
       });
       STUDENTS.push(created);
@@ -509,7 +545,11 @@
       toast("Alumno creado", email ? `${name} ya puede iniciar sesión` : name, "ok");
       applyPlanGating();
     } catch (ex) {
-      if (ex._planLimit) toast("Límite del plan alcanzado", ex.message, "err");
+      if (ex._planLimit) {
+        $$(".modal-overlay").forEach((m) => m.classList.remove("is-open"));
+        $("#limitText") && ($("#limitText").textContent = ex.message);
+        $("#modal-limit")?.classList.add("is-open");
+      }
       else if (ex._authOnly) errToast(ex, "No se pudo crear la cuenta de acceso (¿correo ya usado?)");
       else errToast(ex, "No se pudo crear el alumno");
     } finally { btn.disabled = false; btn.textContent = btnLabel; }
@@ -967,6 +1007,10 @@
     const convo = e.target.closest(".js-conversation");
     if (convo) selectConversation(convo.dataset.student);
   });
+  // La ficha del alumno en Mensajes SOLO se abre con este botón dedicado.
+  $("#btnThreadProfile")?.addEventListener("click", () => {
+    if (activeConversationId) openDrawer(activeConversationId);
+  });
   $("#formSendMessage")?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const input = $("#messageInput");
@@ -1085,7 +1129,7 @@
   }
   function updateKpis() {
     const fin = api.financeKpis(PAYMENTS);
-    const active = STUDENTS.filter((s) => s.state === "ok").length;
+    const active = STUDENTS.filter((s) => s.state === "activo").length;
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -1149,16 +1193,35 @@
     if (updated) updated.textContent = "Cobros reales · últimos 12 meses";
   }
 
-  /* ---------- Gating por plan ---------- */
+  /* ---------- Gating por plan (sistema central de permisos) ---------- */
   const lockSvg = '<svg viewBox="0 0 24 24" width="13" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:auto;opacity:.6"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+  const lockSvgBig = '<svg viewBox="0 0 24 24" width="26" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.7"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+
+  /* Bloqueo visual premium de una tarjeta completa (reversible al subir de plan) */
+  function setCardLocked(card, feat, locked) {
+    if (!card) return;
+    let ov = card.querySelector(":scope > .premium-lock");
+    if (locked && !ov) {
+      card.style.position = "relative";
+      ov = document.createElement("div");
+      ov.className = "premium-lock";
+      ov.style.cssText = "position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border-radius:inherit;background:color-mix(in srgb, var(--bg-base) 78%, transparent);backdrop-filter:blur(4px);cursor:pointer;text-align:center;padding:20px";
+      ov.innerHTML = `${lockSvgBig}<div class="fw-600">Función premium</div><p class="t3 text-sm" style="max-width:280px;margin:0">Esta función estará disponible cuando actualices tu plan.</p>`;
+      ov.addEventListener("click", () => showUpsell(feat));
+      card.appendChild(ov);
+    } else if (!locked && ov) {
+      ov.remove();
+    }
+  }
+
   function applyPlanGating() {
-    const plan = PROFILE.plan || "Star";
+    const plan = PROFILE.plan || "Free";
     FEATURES = api.planFeatures(plan);
     // Badge del plan en el sidebar
     const planBadge = $(".coach-card__plan .badge");
     if (planBadge) planBadge.textContent = "★ " + plan;
     // Candados en la navegación: se añaden si la feature está bloqueada y se
-    // quitan si el plan la desbloquea (p. ej. tras subir a Star Plus).
+    // quitan si el plan la desbloquea (sincroniza también en tiempo real).
     Object.entries(VIEW_FEATURE).forEach(([view, feat]) => {
       const item = $(`.nav__item[data-nav="${view}"]`);
       if (!item) return;
@@ -1171,13 +1234,38 @@
       } else if (FEATURES[feat] && existing) {
         existing.remove();
       }
+      // Si el coach baja de plan estando dentro de una vista bloqueada, sale de ella.
+      if (!FEATURES[feat] && $("#view-" + view)?.classList.contains("is-active")) goTo("dashboard");
+    });
+    // Tarjetas del dashboard que dependen del plan (bloqueadas, no ocultas)
+    setCardLocked($("#followUpsList")?.closest(".card"), "followups", !FEATURES.followups);
+    setCardLocked($("#attendanceToday")?.closest(".card"), "attendance", !FEATURES.attendance);
+    // Pestañas de la ficha del alumno: en Free solo Información, Pagos y Notas
+    Object.entries(TAB_FEATURE).forEach(([tab, feat]) => {
+      const t = $(`#dwTabs .tab[data-tab="${tab}"]`);
+      if (!t) return;
+      const locked = !FEATURES[feat];
+      t.dataset.locked = locked ? "1" : "0";
+      t.style.opacity = locked ? ".45" : "";
+      const existing = t.querySelector("svg[data-lock]");
+      if (locked && !existing) {
+        const tmp = document.createElement("span");
+        tmp.innerHTML = lockSvg.replace('style="margin-left:auto;opacity:.6"', 'style="margin-left:5px;opacity:.6;vertical-align:-2px"');
+        tmp.firstChild.dataset.lock = "1";
+        t.appendChild(tmp.firstChild);
+      } else if (!locked && existing) existing.remove();
+      // Si la pestaña activa quedó bloqueada, vuelve a Información
+      if (locked && t.classList.contains("is-active")) $('#dwTabs .tab[data-tab="info"]')?.click();
     });
     // Tarjeta del plan en Ajustes: nombre, límite y uso
     const limit = api.planLimit(plan);
     $("#planName") && ($("#planName").textContent = plan);
-    $("#planDesc") && ($("#planDesc").textContent = FEATURES.routines
-      ? `Hasta ${limit} alumnos · Rutinas personalizadas · Comunidad`
-      : `Hasta ${limit} alumnos · Gestión de alumnos y pagos`);
+    const desc = plan === "Free"
+      ? `Hasta ${limit} alumnos · Dashboard, alumnos, pagos y ajustes`
+      : FEATURES.routines
+        ? `Hasta ${limit} alumnos · Todo incluido: rutinas, comunidad, mensajes`
+        : `Hasta ${limit} alumnos · Mensajes, seguimientos y asistencia`;
+    $("#planDesc") && ($("#planDesc").textContent = desc);
     $("#planUsage") && ($("#planUsage").textContent = `${STUDENTS.length}/${limit}`);
     $("#planUsageBar") && ($("#planUsageBar").style.width = Math.min(100, (STUDENTS.length / limit) * 100) + "%");
     renderSubscription();
@@ -1191,7 +1279,7 @@
     incomplete_expired: ["Expirada", "badge--late"],
   };
   function renderSubscription() {
-    const plan = PROFILE.plan || "Star";
+    const plan = PROFILE.plan || "Free";
     const status = PROFILE.subscription_status;
     const active = status === "active" || status === "trialing";
     const row = $("#subStatusRow"), badge = $("#subStatusBadge");
@@ -1217,24 +1305,58 @@
     if (hint) {
       hint.textContent = active
         ? (PROFILE.current_period_end ? `Se renueva el ${new Date(PROFILE.current_period_end).toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: "numeric" })}` : "")
-        : "Suscríbete para activar tu plan. Pagos seguros con Stripe.";
+        : "Estás en el plan Free. Elige un plan para desbloquear más alumnos y funciones premium.";
     }
   }
 
+  /* Pago embebido: todo el flujo ocurre dentro de la app (modal premium).
+     Si el servidor aún no tiene clave publicable, cae al checkout alojado. */
+  let EMBEDDED_CHECKOUT = null;
+  function destroyEmbeddedCheckout() {
+    if (EMBEDDED_CHECKOUT) { try { EMBEDDED_CHECKOUT.destroy(); } catch (_) {} EMBEDDED_CHECKOUT = null; }
+  }
+  function loadStripeJs() {
+    if (window.Stripe) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = "https://js.stripe.com/v3/";
+      s.onload = resolve;
+      s.onerror = () => reject(new Error("No se pudo cargar el módulo de pago"));
+      document.head.appendChild(s);
+    });
+  }
   async function startCheckout(plan) {
     try {
       const { data: { session } } = await window.msfSupabase.auth.getSession();
       if (!session) return toast("Sesión expirada, vuelve a entrar", "", "err");
-      toast("Abriendo pago seguro…", "", "info");
+      toast("Preparando pago seguro…", "", "info");
       const r = await fetch("/api/checkout", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ access_token: session.access_token, plan }),
       });
       const data = await r.json();
-      if (!r.ok || !data.url) throw new Error(data.error || "No se pudo iniciar el pago");
-      window.location.href = data.url;
+      if (!r.ok) throw new Error(data.error || "No se pudo iniciar el pago");
+      if (data.client_secret && data.publishable_key) {
+        await loadStripeJs();
+        destroyEmbeddedCheckout();
+        const stripeClient = window.Stripe(data.publishable_key);
+        EMBEDDED_CHECKOUT = await stripeClient.initEmbeddedCheckout({ clientSecret: data.client_secret });
+        $("#checkoutMount").innerHTML = "";
+        EMBEDDED_CHECKOUT.mount("#checkoutMount");
+        $("#modal-checkout").classList.add("is-open");
+        return;
+      }
+      if (data.url) { window.location.href = data.url; return; }
+      throw new Error("No se pudo iniciar el pago");
     } catch (ex) { errToast(ex, "No se pudo iniciar el pago"); }
   }
+  // Al cerrar el modal de pago (o cualquier modal), limpia el checkout embebido.
+  document.addEventListener("click", (e) => {
+    if ((e.target.classList.contains("modal-overlay") || e.target.closest(".js-modal-close")) &&
+        $("#modal-checkout")?.classList.contains("is-open") === false) {
+      destroyEmbeddedCheckout();
+    }
+  });
   async function openPortal() {
     try {
       const { data: { session } } = await window.msfSupabase.auth.getSession();
@@ -1368,6 +1490,15 @@
         if ($("#view-comunidad")?.classList.contains("is-active")) renderCommunity();
       })
       .subscribe();
+    // Plan del coach en canal dedicado: si cambia (upgrade/downgrade vía
+    // webhook), el gating de toda la app se resincroniza al instante.
+    window.msfSupabase
+      .channel("coach-plan-" + PROFILE.id)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${PROFILE.id}` }, (payload) => {
+        PROFILE = { ...PROFILE, ...payload.new };
+        applyPlanGating();
+      })
+      .subscribe();
   }
 
   /* ---------- Init ---------- */
@@ -1378,6 +1509,7 @@
     if (!list) return;
     try {
       OBJECTIVES = await api.listObjectives(PROFILE.id);
+      updateObjectiveReminder();
       if (!OBJECTIVES.length) {
         list.innerHTML = `<p class="t3 text-sm">Aún no has creado objetivos. Crea el primero arriba.</p>`;
         return;
@@ -1394,6 +1526,16 @@
         </div>`).join("");
     } catch (ex) { errToast(ex, "No se pudo cargar el catálogo de objetivos"); }
   }
+  /* Recordatorio en toda la app mientras el coach tenga menos de 3 objetivos.
+     Desaparece automáticamente al llegar a 3. */
+  function updateObjectiveReminder() {
+    const show = OBJECTIVES.length < 3;
+    const dash = $("#objReminderDash");
+    if (dash) dash.style.display = show ? "flex" : "none";
+    const ajustes = $("#objReminderSettings");
+    if (ajustes) ajustes.style.display = show ? "flex" : "none";
+  }
+
   function wireObjectives() {
     $("#formObjective")?.addEventListener("submit", async (e) => {
       e.preventDefault();
