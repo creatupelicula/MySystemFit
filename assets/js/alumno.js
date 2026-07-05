@@ -35,7 +35,7 @@
     window.location.href = "login.html";
   }
   document.addEventListener("click", (e) => {
-    if (e.target.closest("#aLogout")) { e.preventDefault(); doLogout(); }
+    if (e.target.closest("#aLogout") || e.target.closest("#aLogoutSettings")) { e.preventDefault(); doLogout(); }
   });
 
   /* Navegación bottom nav. Las vistas bloqueadas por el plan del coach NUNCA
@@ -55,6 +55,7 @@
     if (view === "comunidad") renderCommunity();
     if (view === "chat") loadChat();
     if (view === "progreso") renderPhotoTimeline();
+    if (view === "ajustes") renderSettingsView();
   }
   document.addEventListener("click", (e) => {
     const b = e.target.closest("[data-anav]");
@@ -424,6 +425,7 @@
       $("#attendanceTimeBlock")?.classList.add("hidden");
       paintAttendance(row);
       toast(surveyMode === "presencial" ? "¡Tu coach ya sabe que vas mañana! 🔥" : "¡Buen trabajo! Registrado ✅", "ok");
+      window.msfSound?.playSound?.("confirm");
     } catch (ex) { errToast(ex, "No se pudo guardar tu respuesta"); }
     finally { btn.disabled = false; }
   });
@@ -437,6 +439,7 @@
       $("#attendanceReasonBlock")?.classList.add("hidden");
       paintAttendance(row);
       toast("Respuesta enviada a tu coach", "info");
+      window.msfSound?.playSound?.("confirm");
     } catch (ex) { errToast(ex, "No se pudo enviar tu respuesta"); }
     finally { btn.disabled = false; }
   });
@@ -602,17 +605,30 @@
      coach. Nunca ve precios, upgrades ni pagos del sistema. Si el coach sube
      o baja de plan, esto se resincroniza en tiempo real. */
   let COACH_FEATURES = api.planFeatures("Free");
+  let COACH_NAME = "";
   function applyCoachPlan(plan) {
     COACH_FEATURES = api.planFeatures(plan || "Free");
     LOCKED_NAVS.clear();
     if (!COACH_FEATURES.community) LOCKED_NAVS.add("comunidad");
     if (!COACH_FEATURES.messages) LOCKED_NAVS.add("chat");
+    if (!COACH_FEATURES.routines) { LOCKED_NAVS.add("rutina"); LOCKED_NAVS.add("progreso"); }
     $$('[data-anav="comunidad"]').forEach((b) => b.classList.toggle("is-locked", !COACH_FEATURES.community));
     $$('[data-anav="chat"]').forEach((b) => b.classList.toggle("is-locked", !COACH_FEATURES.messages));
+    $$('[data-anav="rutina"]').forEach((b) => b.classList.toggle("is-locked", !COACH_FEATURES.routines));
+    $$('[data-anav="progreso"]').forEach((b) => b.classList.toggle("is-locked", !COACH_FEATURES.routines));
     if (!COACH_FEATURES.community && $("#a-comunidad")?.classList.contains("is-active")) anav("home");
     if (!COACH_FEATURES.messages && $("#a-chat")?.classList.contains("is-active")) anav("home");
+    if (!COACH_FEATURES.routines && ($("#a-rutina")?.classList.contains("is-active") || $("#a-progreso")?.classList.contains("is-active"))) anav("home");
     // Subida de fotos: Star+. La encuesta diaria es de plan Free, siempre disponible.
     $("#dropzone")?.classList.toggle("is-locked", !COACH_FEATURES.photos);
+    // Objetivos: catálogo simple en Free (sin seguimiento), card rico con progreso en Star+.
+    if (COACH_FEATURES.objectives) {
+      $("#objectivesSimple")?.classList.add("hidden");
+      loadMyObjectives();
+    } else {
+      $("#objectivesCard")?.classList.add("hidden");
+      loadSimpleObjective();
+    }
     loadAttendance();
   }
 
@@ -635,10 +651,10 @@
       .on("postgres_changes",
         { event: "*", schema: "public", table: "payments", filter: `student_id=eq.${STUDENT.id}` },
         () => loadPendingPayment())
-      // Objetivos asignados/quitados por el coach
+      // Objetivos asignados/quitados por el coach (o cambiados por el propio alumno en otro dispositivo)
       .on("postgres_changes",
         { event: "*", schema: "public", table: "student_objectives", filter: `student_id=eq.${STUDENT.id}` },
-        () => loadMyObjectives())
+        () => { loadMyObjectives(); loadSimpleObjective(); if ($("#a-ajustes")?.classList.contains("is-active")) renderSettingsView(); })
       // Comunidad de su coach: publicaciones/comentarios/likes en vivo
       .on("postgres_changes",
         { event: "*", schema: "public", table: "community_posts", filter: `coach_id=eq.${PROFILE.coach_id}` },
@@ -662,6 +678,7 @@
   async function loadMyObjectives() {
     const card = $("#objectivesCard"), box = $("#myObjectives");
     if (!card || !box || !STUDENT) return;
+    if (!COACH_FEATURES.objectives) { card.classList.add("hidden"); return; }
     try {
       const rows = await api.listStudentObjectives(STUDENT.id);
       if (!rows.length) { card.classList.add("hidden"); return; }
@@ -680,8 +697,63 @@
     const btn = e.target.closest(".js-toggle-objective");
     if (!btn) return;
     btn.disabled = true;
-    try { await api.setObjectiveStatus(btn.dataset.id, btn.dataset.status); await loadMyObjectives(); }
+    try { await api.setObjectiveStatus(btn.dataset.id, btn.dataset.status); await loadMyObjectives(); window.msfSound?.playSound?.("click"); }
     catch (ex) { btn.disabled = false; errToast(ex, "No se pudo actualizar"); }
+  });
+
+  /* ---------- Objetivo simple (Free): uno de los 5 del catálogo, sin seguimiento ---------- */
+  let CATALOG_OBJECTIVES = [];
+  let CURRENT_CATALOG_ID = null;
+  async function loadSimpleObjective() {
+    const card = $("#objectivesSimple"), nameEl = $("#objectivesSimpleName");
+    if (!card || !STUDENT) return;
+    card.classList.remove("hidden");
+    try {
+      const current = await api.getCatalogObjective(STUDENT.id);
+      CURRENT_CATALOG_ID = current?.objective_id || null;
+      if (nameEl) nameEl.textContent = current?.coach_objectives?.title || "Aún no elegido";
+    } catch (ex) { console.error("No se pudo cargar tu objetivo:", ex); }
+  }
+
+  /* ---------- Ajustes ---------- */
+  async function renderSettingsView() {
+    $("#aSettingsName") && ($("#aSettingsName").textContent = PROFILE?.full_name || "—");
+    $("#aSettingsCoach") && ($("#aSettingsCoach").textContent = COACH_NAME || "—");
+    $("#aSettingsPlan") && ($("#aSettingsPlan").textContent = COACH_FEATURES.objectives ? "Tu coach tiene funciones premium activas" : "Plan básico");
+    const soundToggle = $("#aSoundToggle");
+    if (soundToggle) soundToggle.checked = window.msfSound ? window.msfSound.isEnabled() : true;
+    const chipsWrap = $("#aObjectiveChips");
+    if (!chipsWrap) return;
+    try {
+      if (!CATALOG_OBJECTIVES.length) CATALOG_OBJECTIVES = await api.listSystemObjectives();
+      if (CURRENT_CATALOG_ID === null && STUDENT) {
+        const current = await api.getCatalogObjective(STUDENT.id);
+        CURRENT_CATALOG_ID = current?.objective_id || null;
+      }
+      chipsWrap.innerHTML = CATALOG_OBJECTIVES.map((o) =>
+        `<button type="button" class="chip-select ${o.id === CURRENT_CATALOG_ID ? "is-sel" : ""}" data-obj-id="${o.id}">${api.esc(o.title)}</button>`
+      ).join("");
+    } catch (ex) { console.error("No se pudo cargar el catálogo de objetivos:", ex); }
+  }
+  document.addEventListener("click", async (e) => {
+    const chip = e.target.closest("#aObjectiveChips .chip-select");
+    if (!chip) return;
+    if (chip.dataset.objId === CURRENT_CATALOG_ID) return;
+    chip.disabled = true;
+    try {
+      await api.setCatalogObjective(chip.dataset.objId);
+      CURRENT_CATALOG_ID = chip.dataset.objId;
+      window.msfSound?.playSound?.("save");
+      toast("Objetivo actualizado", "ok");
+      renderSettingsView();
+      loadSimpleObjective();
+    } catch (ex) { errToast(ex, "No se pudo actualizar tu objetivo"); }
+    finally { chip.disabled = false; }
+  });
+  document.addEventListener("change", (e) => {
+    if (e.target.id !== "aSoundToggle") return;
+    window.msfSound?.setEnabled?.(e.target.checked);
+    if (e.target.checked) window.msfSound?.playSound?.("click");
   });
 
   /* ---------- Onboarding inicial (una sola vez) ----------
@@ -800,6 +872,7 @@
         paintHome();
         loadMyObjectives();
         toast("¡Listo! Tu coach ya tiene tus objetivos 🎯", "ok");
+        window.msfSound?.playSound?.("save");
       } catch (ex) {
         nextBtn.disabled = false; nextBtn.textContent = "Terminar 🚀";
         errToast(ex, "No se pudo guardar. Inténtalo de nuevo.");
@@ -837,6 +910,7 @@
       const { data: coach } = await window.msfSupabase
         .from("profiles").select("full_name, plan").eq("id", PROFILE.coach_id).maybeSingle();
       if (coach) {
+        COACH_NAME = coach.full_name || "";
         $("#chatCoachName") && ($("#chatCoachName").textContent = coach.full_name);
         applyCoachPlan(coach.plan);
       } else {
@@ -848,7 +922,6 @@
     }
 
     maybeShowOnboarding();
-    loadMyObjectives();
     paintHome();
     animateRing();
     loadAttendance();

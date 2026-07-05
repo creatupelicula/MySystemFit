@@ -343,6 +343,20 @@ window.msfApi = (function () {
     if (error) throw error;
     return data || [];
   }
+  // Catálogo de sistema (5 fijos, todos los planes) + objetivos personalizados del coach (Star+).
+  async function listCatalogAndCustom(coachId) {
+    const { data, error } = await sb().from("coach_objectives")
+      .select("*").or(`is_system.eq.true,coach_id.eq.${coachId}`)
+      .order("is_system", { ascending: false }).order("title");
+    if (error) throw error;
+    return data || [];
+  }
+  async function listSystemObjectives() {
+    const { data, error } = await sb().from("coach_objectives")
+      .select("*").eq("is_system", true).order("title");
+    if (error) throw error;
+    return data || [];
+  }
   async function createObjective(coachId, title, description, goalType) {
     const { data, error } = await sb().from("coach_objectives")
       .insert({ coach_id: coachId, title, description: description || null, goal_type: goalType || null })
@@ -357,10 +371,16 @@ window.msfApi = (function () {
   // Asignaciones de un alumno (con el objetivo embebido).
   async function listStudentObjectives(studentId) {
     const { data, error } = await sb().from("student_objectives")
-      .select("*, coach_objectives(title, description, goal_type)")
+      .select("*, coach_objectives(title, description, goal_type, is_system)")
       .eq("student_id", studentId).order("assigned_at", { ascending: true });
     if (error) throw error;
     return data || [];
+  }
+  // Objetivo de catálogo (Free) actualmente activo del alumno, si existe.
+  async function getCatalogObjective(studentId) {
+    const rows = await listStudentObjectives(studentId);
+    const catalogRows = rows.filter((r) => r.coach_objectives?.is_system);
+    return catalogRows.length ? catalogRows[catalogRows.length - 1] : null;
   }
   async function assignObjective(studentId, objectiveId, coachId) {
     const { error } = await sb().from("student_objectives")
@@ -376,6 +396,12 @@ window.msfApi = (function () {
   async function setObjectiveStatus(id, status) {
     const { error } = await sb().from("student_objectives").update({ status }).eq("id", id);
     if (error) throw error;
+  }
+  // Alumno autoservicio: cambia entre los 5 objetivos de catálogo (disponible en todos los planes).
+  async function setCatalogObjective(objectiveId) {
+    const { data, error } = await sb().rpc("set_catalog_objective", { p_objective_id: objectiveId });
+    if (error) throw error;
+    return data;
   }
 
   // Guarda el onboarding del alumno (una sola vez) vía RPC segura.
@@ -488,6 +514,18 @@ window.msfApi = (function () {
     if (error) throw error;
   }
 
+  /* ---------- Notificaciones ---------- */
+  async function listNotifications(coachId) {
+    const { data, error } = await sb().from("notifications")
+      .select("*").eq("coach_id", coachId).order("created_at", { ascending: false }).limit(30);
+    if (error) throw error;
+    return data || [];
+  }
+  async function markNotificationRead(id) {
+    const { error } = await sb().from("notifications").update({ read: true }).eq("id", id);
+    if (error) throw error;
+  }
+
   return {
     initials, esc, friendlyError,
     planLimit, planFeatures, can, myCoachPlan, countStudents,
@@ -495,6 +533,7 @@ window.msfApi = (function () {
     saveDailySurvey, cancelAttendance, myAttendance, listCoachAttendance, resetAttendanceDay, listMyAttendance,
     saveOnboarding,
     listObjectives, createObjective, deleteObjective,
+    listCatalogAndCustom, listSystemObjectives, getCatalogObjective, setCatalogObjective,
     listStudentObjectives, assignObjective, unassignObjective, setObjectiveStatus,
     financeKpis,
     listStudents, createStudent, createStudentFull, updateStudent, deleteStudent,
@@ -505,5 +544,6 @@ window.msfApi = (function () {
     uploadProgressPhoto, listProgressPhotos,
     listCommunityPosts, createCommunityPost, toggleLike, addComment,
     listConversations, listMessages, sendMessage,
+    listNotifications, markNotificationRead,
   };
 })();

@@ -23,6 +23,7 @@
       <div class="a-top__name"></div>
     </div>
     <button class="icon-btn" data-anav="chat" aria-label="Mensajes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="icon-btn__dot hidden" id="aNotifDot">0</span></button>
+    <button class="icon-btn" data-anav="ajustes" aria-label="Ajustes" title="Ajustes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
     <button class="icon-btn" id="aLogout" aria-label="Cerrar sesión" title="Cerrar sesión"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
   </header>
 
@@ -118,10 +119,19 @@
         <svg viewBox="0 0 24 24" width="22" fill="none" stroke="var(--text-3)" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
       </button>
 
-      <!-- Objetivos asignados por el coach -->
+      <!-- Objetivos asignados por el coach (Star+: seguimiento con progreso) -->
       <div class="card mt-4 hidden" id="objectivesCard">
         <div class="section-title">Tus objetivos</div>
         <div id="myObjectives"></div>
+      </div>
+
+      <!-- Objetivo simple (Free: uno de los 5 del catálogo, sin seguimiento) -->
+      <div class="card mt-4 hidden" id="objectivesSimple">
+        <div class="section-title">Tu objetivo</div>
+        <div class="row between" style="align-items:center">
+          <div class="fw-600" id="objectivesSimpleName">—</div>
+          <button class="btn btn--ghost btn--sm" data-anav="ajustes">Cambiar</button>
+        </div>
       </div>
 
       <div class="section-title mt-6">Esta semana</div>
@@ -189,6 +199,36 @@
       <div class="page-head mb-4"><div><h1 class="a-h1" id="chatCoachName">Tu coach</h1><p>Chat directo con tu coach</p></div></div>
       <div style="display:flex;flex-direction:column;gap:12px;min-height:420px"></div>
       <div class="row gap-3 mt-4" style="position:sticky;bottom:0"><input class="input" placeholder="Escribe un mensaje…" id="chatInput"><button class="btn btn--primary btn--icon" id="chatSend"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>
+    </section>
+
+    <!-- ============ AJUSTES ============ -->
+    <section class="a-view" id="a-ajustes">
+      <div class="page-head mb-4"><div><h1 class="a-h1">Ajustes</h1><p>Tu perfil y preferencias</p></div></div>
+
+      <div class="card mb-4">
+        <div class="section-title">Tu perfil</div>
+        <div class="kv"><span>Nombre</span><span id="aSettingsName">—</span></div>
+        <div class="kv"><span>Coach</span><span id="aSettingsCoach">—</span></div>
+        <div class="kv"><span>Plan</span><span id="aSettingsPlan">—</span></div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="section-title">Tu objetivo</div>
+        <p class="t3 text-sm mb-4">Elige el objetivo que mejor describe tu meta actual. Puedes cambiarlo cuando quieras.</p>
+        <div class="row gap-3 wrap" id="aObjectiveChips"></div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="row between" style="align-items:center">
+          <div>
+            <div class="fw-600">Sonidos de interfaz</div>
+            <div class="t3 text-sm">Clics y confirmaciones sutiles</div>
+          </div>
+          <label class="toggle-switch"><input type="checkbox" id="aSoundToggle"><span class="toggle-switch__track"></span></label>
+        </div>
+      </div>
+
+      <button class="btn btn--ghost btn--block" id="aLogoutSettings">Cerrar sesión</button>
     </section>
 
   </div>
@@ -337,6 +377,7 @@
 <script src="assets/js/supabaseClient.js"></script>
 <script src="assets/js/auth.js"></script>
 <script src="assets/js/api.js"></script>
+<script src="assets/js/sound.js"></script>
 <script src="assets/js/alumno.js"></script>
 </body>
 </html>

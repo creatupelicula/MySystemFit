@@ -210,19 +210,27 @@
         <div class="card mt-6">
           <div class="row between mb-4">
             <div>
-              <div class="section-title" style="margin:0">Encuesta diaria</div>
+              <div class="section-title" style="margin:0">Asistencia Programada</div>
               <span class="t3 text-sm" id="attendanceSummary"></span>
             </div>
             <button class="btn btn--ghost btn--sm" id="btnResetAttendance">Reiniciar Día</button>
           </div>
           <div class="row gap-3 wrap mb-4" style="align-items:center">
             <input class="input" id="attSearch" placeholder="Buscar alumno…" style="flex:1;min-width:160px;height:38px">
-            <select class="select" id="attFilterMode" style="width:auto;height:38px"><option value="all">Todos</option><option value="Presencial">Presencial</option><option value="Online">Online</option></select>
             <select class="select" id="attFilterResp" style="width:auto;height:38px"><option value="all">Sí y no</option><option value="yes">Solo sí</option><option value="no">Solo no</option></select>
             <select class="select" id="attSort" style="width:auto;height:38px"><option value="time">Ordenar por horario</option><option value="name">Ordenar por nombre</option></select>
           </div>
           <div class="row gap-3 mb-4" id="attStats"></div>
-          <div id="attendanceToday"></div>
+          <div class="grid-2" id="attendanceBlocks">
+            <div>
+              <div class="section-title text-sm" style="margin:0 0 8px">Presencial</div>
+              <div id="attendanceTodayPresencial"></div>
+            </div>
+            <div>
+              <div class="section-title text-sm" style="margin:0 0 8px">Online</div>
+              <div id="attendanceTodayOnline"></div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -392,8 +400,17 @@
               <p class="t3 text-sm mt-4" id="planHint" style="text-align:center"></p>
             </div>
             <div class="card">
+              <div class="section-title">Facturación</div>
+              <p class="t3 text-sm mb-4">Tu historial de pagos, sin salir de MySystemFit.</p>
+              <div id="invoicesList"><p class="t3 text-sm">Aún no tienes facturas.</p></div>
+            </div>
+            <div class="card">
               <div class="section-title">Apariencia</div>
               <div class="row between mb-4"><span class="muted text-sm">Modo oscuro / claro</span><button class="btn btn--ghost btn--sm" id="themeToggle2">Alternar tema</button></div>
+              <div class="row between mb-4" style="align-items:center">
+                <div><div class="fw-600 text-sm">Sonidos de interfaz</div><div class="t3 text-sm">Clics y confirmaciones sutiles</div></div>
+                <label class="toggle-switch"><input type="checkbox" id="soundToggleCoach"><span class="toggle-switch__track"></span></label>
+              </div>
               <div class="field" style="margin:0">
                 <label>Color de acento</label>
                 <div class="swatches" id="accentSwatches"></div>
@@ -415,24 +432,27 @@
         </div>
 
         <div class="card mt-6" id="objectivesCardCoach">
-          <div class="section-title">Objetivos del Coach</div>
+          <div class="section-title">Objetivos</div>
           <div class="mb-4" id="objReminderSettings" style="display:none;align-items:center;gap:10px;padding:12px 14px;border-radius:12px;border:1px solid var(--indigo);background:var(--indigo-soft)"><span>🎯</span><span class="text-sm fw-600">Crea al menos 3 objetivos para mejorar la experiencia de tus alumnos.</span></div>
-          <p class="t3 text-sm mb-4">Crea tus propios objetivos (ej. Perder grasa, Ganar masa muscular, Running, Crossfit…). Cuando un alumno termine su cuestionario de bienvenida, se le asignarán automáticamente los que coincidan con su objetivo.</p>
-          <form id="formObjective" class="stack gap-3 mb-4">
-            <div class="row gap-3" style="flex-wrap:wrap">
-              <input class="input" id="objTitle" placeholder="Título (ej. Programa de definición 8 semanas)" required style="flex:2;min-width:220px">
-              <select class="select" id="objGoalType" style="flex:1;min-width:160px">
-                <option value="">Cualquier objetivo</option>
-                <option>Perder grasa</option>
-                <option>Ganar músculo</option>
-                <option>Recomposición</option>
-                <option>Rendimiento</option>
-                <option>Salud y hábitos</option>
-              </select>
-            </div>
-            <textarea class="input" id="objDesc" placeholder="Descripción (opcional): en qué consiste este objetivo…" style="min-height:60px;resize:vertical"></textarea>
-            <button type="submit" class="btn btn--primary btn--sm" style="align-self:flex-start">Añadir objetivo</button>
-          </form>
+          <p class="t3 text-sm mb-4">Los 5 objetivos del catálogo están disponibles para asignar en cualquier plan. Con Star o superior puedes crear objetivos personalizados (ej. Perder grasa, Ganar masa muscular, Running, Crossfit…) que se asignan automáticamente cuando el alumno complete su cuestionario de bienvenida.</p>
+          <div id="objectivesCustomWrap">
+            <form id="formObjective" class="stack gap-3 mb-4">
+              <div class="row gap-3" style="flex-wrap:wrap">
+                <input class="input" id="objTitle" placeholder="Título (ej. Programa de definición 8 semanas)" required style="flex:2;min-width:220px">
+                <select class="select" id="objGoalType" style="flex:1;min-width:160px">
+                  <option value="">Cualquier objetivo</option>
+                  <option>Perder grasa</option>
+                  <option>Ganar músculo</option>
+                  <option>Recomposición</option>
+                  <option>Rendimiento</option>
+                  <option>Salud y hábitos</option>
+                </select>
+              </div>
+              <textarea class="input" id="objDesc" placeholder="Descripción (opcional): en qué consiste este objetivo…" style="min-height:60px;resize:vertical"></textarea>
+              <button type="submit" class="btn btn--primary btn--sm" style="align-self:flex-start">Añadir objetivo</button>
+            </form>
+          </div>
+          <p class="t3 text-sm mb-4" id="objectivesCustomLocked" style="display:none">🔒 Disponible en Plan Star: crea objetivos personalizados para tus alumnos.</p>
           <div id="objectivesList"></div>
         </div>
       </section>
@@ -615,17 +635,35 @@
     <div class="modal__ico" style="background:var(--amber-soft);color:var(--amber)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
     <h3 id="upsellTitle">Función premium</h3>
     <p id="upsellText">Esta función forma parte de un plan superior. Actualiza tu plan para desbloquearla.</p>
-    <div class="modal__actions"><button class="btn btn--ghost js-modal-close">Ahora no</button><button class="btn btn--primary js-modal-close" data-nav="ajustes">Ver mi plan</button></div>
+    <ul class="premium-lock__benefits" id="upsellBenefits" style="margin:8px 0"></ul>
+    <div class="premium-lock__price" id="upsellPrice"></div>
+    <div class="modal__actions"><button class="btn btn--ghost js-modal-close">Ahora no</button><button class="btn btn--primary" id="upsellCta">Actualizar plan</button></div>
   </div>
 </div>
 
 <div class="modal-overlay" id="modal-checkout">
   <div class="modal modal--wide" style="max-width:480px;padding:14px">
     <div class="row between" style="align-items:center;padding:4px 6px 10px">
-      <div class="fw-600">Completar suscripción</div>
+      <div class="row gap-3" style="align-items:center">
+        <div class="brand__logo" style="width:28px;height:28px"><svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5 17.5 17.5M4 12l4-4M16 16l4-4M8 4l12 12M4 8l12 12"/></svg></div>
+        <div class="fw-600">MySystem<span style="color:var(--indigo-hi)">Fit</span></div>
+      </div>
       <button class="icon-btn js-modal-close" type="button" aria-label="Cerrar" style="width:32px;height:32px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
-    <div id="checkoutMount" style="min-height:420px;max-height:74vh;overflow:auto;border-radius:12px"></div>
+    <div class="checkout-summary" style="padding:12px 6px;border-bottom:1px solid var(--border);margin-bottom:12px">
+      <div class="row between" style="align-items:baseline">
+        <div>
+          <div class="t3 text-sm">Suscripción a</div>
+          <div class="fw-700 fs-18" id="checkoutPlanName">Star</div>
+        </div>
+        <div style="text-align:right">
+          <div class="fw-700 fs-18"><span id="checkoutPlanPrice">$500 MXN</span></div>
+          <div class="t3 text-sm">/mes</div>
+        </div>
+      </div>
+      <div class="badge badge--ok mt-4" style="width:100%;justify-content:center">🔒 Pago seguro procesado por Stripe</div>
+    </div>
+    <div id="checkoutMount" style="min-height:380px;max-height:64vh;overflow:auto;border-radius:12px"></div>
   </div>
 </div>
 
@@ -646,6 +684,7 @@
 <script src="assets/js/supabaseClient.js"></script>
 <script src="assets/js/auth.js"></script>
 <script src="assets/js/api.js"></script>
+<script src="assets/js/sound.js"></script>
 <script src="assets/js/app.js"></script>
 </body>
 </html>

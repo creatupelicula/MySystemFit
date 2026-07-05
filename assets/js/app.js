@@ -65,13 +65,30 @@
     objectives: "El catálogo de objetivos y su seguimiento",
     photos: "La subida de fotos de progreso",
   };
+  /* Qué plan desbloquea cada capability, con sus beneficios y precio real (Stripe live). */
+  const FEATURE_PLAN_META = {
+    messages: { plan: "Star", price: "$500 MXN/mes", benefits: ["Chat directo con tus alumnos", "Objetivos personalizados", "Fotos de progreso"] },
+    objectives: { plan: "Star", price: "$500 MXN/mes", benefits: ["Objetivos personalizados ilimitados", "Seguimiento con progreso", "Mensajería incluida"] },
+    photos: { plan: "Star", price: "$500 MXN/mes", benefits: ["Fotos de progreso de tus alumnos", "Comparativa de evolución", "Mensajería incluida"] },
+    community: { plan: "Star Plus", price: "$1,000 MXN/mes", benefits: ["Muro de comunidad para tus alumnos", "Constructor de rutinas", "Todo lo de Star"] },
+    routines: { plan: "Star Plus", price: "$1,000 MXN/mes", benefits: ["Constructor de rutinas personalizadas", "Comunidad para tus alumnos", "Todo lo de Star"] },
+  };
   function viewLocked(view) {
     const feat = VIEW_FEATURE[view];
     return feat && FEATURES && !FEATURES[feat];
   }
   function showUpsell(feat) {
-    $("#upsellTitle") && ($("#upsellTitle").textContent = "Función premium");
-    $("#upsellText") && ($("#upsellText").textContent = `${FEATURE_NAME[feat] || "Esta función"} forma parte de un plan superior. Actualiza tu plan para desbloquearla.`);
+    const meta = FEATURE_PLAN_META[feat] || { plan: "Star", price: "", benefits: [] };
+    $("#upsellTitle") && ($("#upsellTitle").textContent = `Disponible en Plan ${meta.plan}`);
+    $("#upsellText") && ($("#upsellText").textContent = `${FEATURE_NAME[feat] || "Esta función"} está incluida a partir del Plan ${meta.plan}.`);
+    const benefitsEl = $("#upsellBenefits");
+    if (benefitsEl) benefitsEl.innerHTML = meta.benefits.slice(0, 3).map((b) => `<li>${api.esc(b)}</li>`).join("");
+    $("#upsellPrice") && ($("#upsellPrice").textContent = meta.price);
+    const cta = $("#upsellCta");
+    if (cta) {
+      cta.textContent = meta.plan === "Star Plus" ? "Mejorar a Star Plus" : "Actualizar a Star";
+      cta.onclick = () => { $("#modal-upsell")?.classList.remove("is-open"); startCheckout(meta.plan); };
+    }
     $("#modal-upsell")?.classList.add("is-open");
   }
   function goTo(view) {
@@ -91,6 +108,7 @@
     if (view === "comunidad") renderCommunity();
     if (view === "mensajes") renderConversations();
     if (view === "referidos") renderReferrals();
+    if (view === "ajustes") loadInvoices();
   }
   document.addEventListener("click", (e) => {
     const nav = e.target.closest("[data-nav]");
@@ -105,6 +123,16 @@
   }
   $("#themeToggle")?.addEventListener("click", toggleTheme);
   $("#themeToggle2")?.addEventListener("click", toggleTheme);
+
+  /* ---------- Sonidos de interfaz ---------- */
+  const soundToggleCoach = $("#soundToggleCoach");
+  if (soundToggleCoach && window.msfSound) {
+    soundToggleCoach.checked = window.msfSound.isEnabled();
+    soundToggleCoach.addEventListener("change", (e) => {
+      window.msfSound.setEnabled(e.target.checked);
+      if (e.target.checked) window.msfSound.playSound("click");
+    });
+  }
 
   /* ---------- Ajustes: color de acento ---------- */
   function renderAccentSwatches() {
@@ -191,12 +219,11 @@
       </div>`;
     }).join("");
 
-    const head = $(".page-head p");
-    if (head && $("#view-alumnos").classList.contains("is-active")) {
+    const headP = $("#view-alumnos .page-head p");
+    if (headP) {
       const active = STUDENTS.filter((s) => s.state === "activo").length;
-      const pend = PAYMENTS.filter((p) => p.state !== "ok").length;
-      const headP = $("#view-alumnos .page-head p");
-      if (headP) headP.textContent = `${active} activos · ${pend} pendientes de pago`;
+      const pend = new Set(PAYMENTS.filter((p) => p.state !== "ok").map((p) => p.student_id)).size;
+      headP.textContent = `${active} activos · ${pend} pendientes de pago · ${STUDENTS.length} total`;
     }
   }
 
@@ -1023,11 +1050,28 @@
     } catch (ex) { errToast(ex, "No se pudo enviar el mensaje"); }
   });
 
-  /* ---------- Notificaciones (derivadas de datos reales) ---------- */
+  /* ---------- Notificaciones (derivadas de datos reales + tabla notifications) ---------- */
   const NOTIF_READ_KEY = "msf_notif_read";
+  let DB_NOTIFICATIONS = [];
+  async function loadNotifications() {
+    try { DB_NOTIFICATIONS = await api.listNotifications(PROFILE.id); renderNotifications(); }
+    catch (ex) { console.error("No se pudieron cargar las notificaciones:", ex); }
+  }
   function readNotifIds() { try { return new Set(JSON.parse(localStorage.getItem(NOTIF_READ_KEY) || "[]")); } catch { return new Set(); } }
   function buildNotifications() {
     const items = [];
+    DB_NOTIFICATIONS.forEach((n) => {
+      items.push({
+        id: "db-" + n.id,
+        dbId: n.id,
+        dbRead: n.read,
+        tone: "indigo",
+        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="3"/></svg>',
+        text: n.message,
+        sub: new Date(n.created_at).toLocaleString("es-MX", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }),
+        nav: "alumnos",
+      });
+    });
     PAYMENTS.filter((p) => p.state !== "ok").forEach((p) => {
       const days = Math.ceil((new Date(p.due_date) - new Date()) / 86400000);
       if (days > 5) return;
@@ -1059,10 +1103,11 @@
     if (!list) return;
     const items = buildNotifications();
     const read = readNotifIds();
-    const unread = items.filter((i) => !read.has(i.id)).length;
+    const isUnread = (i) => (i.dbId ? !i.dbRead : !read.has(i.id));
+    const unread = items.filter(isUnread).length;
     if (dot) { dot.textContent = unread; dot.classList.toggle("hidden", unread === 0); }
     list.innerHTML = items.map((i) => `
-      <button class="notif-item ${read.has(i.id) ? "" : "is-unread"}" data-notif-nav="${i.nav}">
+      <button class="notif-item ${isUnread(i) ? "is-unread" : ""}" data-notif-nav="${i.nav}" data-notif-db="${i.dbId || ""}">
         <span class="notif-item__ico notif-item__ico--${i.tone}">${i.icon}</span>
         <span class="notif-item__body"><span class="notif-item__txt">${api.esc(i.text)}</span><span class="notif-item__sub">${api.esc(i.sub)}</span></span>
       </button>`).join("") || `<p class="t3 text-sm" style="padding:16px;text-align:center">Todo al día 🎉</p>`;
@@ -1075,12 +1120,24 @@
   document.addEventListener("click", (e) => {
     if (!e.target.closest(".notif-wrap")) $("#notifPanel")?.classList.remove("is-open");
     const n = e.target.closest("[data-notif-nav]");
-    if (n) { goTo(n.dataset.notifNav); $("#notifPanel")?.classList.remove("is-open"); }
+    if (n) {
+      goTo(n.dataset.notifNav);
+      if (n.dataset.notifDb) {
+        const item = DB_NOTIFICATIONS.find((x) => x.id === n.dataset.notifDb);
+        if (item) item.read = true;
+        api.markNotificationRead(n.dataset.notifDb).catch(() => {});
+        renderNotifications();
+      }
+      $("#notifPanel")?.classList.remove("is-open");
+    }
   });
-  $("#notifMarkAll")?.addEventListener("click", () => {
-    const ids = buildNotifications().map((i) => i.id);
+  $("#notifMarkAll")?.addEventListener("click", async () => {
+    const ids = buildNotifications().filter((i) => !i.dbId).map((i) => i.id);
     localStorage.setItem(NOTIF_READ_KEY, JSON.stringify(ids));
+    const unreadDb = DB_NOTIFICATIONS.filter((n) => !n.read);
+    DB_NOTIFICATIONS.forEach((n) => (n.read = true));
     renderNotifications();
+    await Promise.all(unreadDb.map((n) => api.markNotificationRead(n.id).catch(() => {})));
   });
 
   /* ---------- Count-up de KPIs ---------- */
@@ -1195,24 +1252,6 @@
 
   /* ---------- Gating por plan (sistema central de permisos) ---------- */
   const lockSvg = '<svg viewBox="0 0 24 24" width="13" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:auto;opacity:.6"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
-  const lockSvgBig = '<svg viewBox="0 0 24 24" width="26" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.7"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
-
-  /* Bloqueo visual premium de una tarjeta completa (reversible al subir de plan) */
-  function setCardLocked(card, feat, locked) {
-    if (!card) return;
-    let ov = card.querySelector(":scope > .premium-lock");
-    if (locked && !ov) {
-      card.style.position = "relative";
-      ov = document.createElement("div");
-      ov.className = "premium-lock";
-      ov.style.cssText = "position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border-radius:inherit;background:color-mix(in srgb, var(--bg-base) 78%, transparent);backdrop-filter:blur(4px);cursor:pointer;text-align:center;padding:20px";
-      ov.innerHTML = `${lockSvgBig}<div class="fw-600">Función premium</div><p class="t3 text-sm" style="max-width:280px;margin:0">Esta función estará disponible cuando actualices tu plan.</p>`;
-      ov.addEventListener("click", () => showUpsell(feat));
-      card.appendChild(ov);
-    } else if (!locked && ov) {
-      ov.remove();
-    }
-  }
 
   function applyPlanGating() {
     const plan = PROFILE.plan || "Free";
@@ -1237,9 +1276,12 @@
       // Si el coach baja de plan estando dentro de una vista bloqueada, sale de ella.
       if (!FEATURES[feat] && $("#view-" + view)?.classList.contains("is-active")) goTo("dashboard");
     });
-    // Objetivos: catálogo (Ajustes) y asignación (ficha del alumno) — Star+
-    setCardLocked($("#objectivesCardCoach"), "objectives", !FEATURES.objectives);
-    setCardLocked($("#dwObjectives")?.closest(".card"), "objectives", !FEATURES.objectives);
+    // Objetivos: el catálogo de 5 (sistema) siempre está disponible; solo la
+    // creación de objetivos personalizados requiere Star+.
+    $("#objectivesCustomWrap")?.classList.toggle("hidden", !FEATURES.objectives);
+    const objLocked = $("#objectivesCustomLocked");
+    if (objLocked) objLocked.style.display = FEATURES.objectives ? "none" : "block";
+    updateObjectiveReminder();
     // Pestañas de la ficha del alumno: en Free solo Información, Pagos y Notas
     Object.entries(TAB_FEATURE).forEach(([tab, feat]) => {
       const t = $(`#dwTabs .tab[data-tab="${tab}"]`);
@@ -1298,8 +1340,8 @@
     if (bStar && bPlus) {
       bStar.disabled = active && plan === "Star";
       bPlus.disabled = active && plan === "Star Plus";
-      bStar.textContent = plan === "Star" && active ? "Star · plan actual" : "Star · $500/mes";
-      bPlus.textContent = plan === "Star Plus" && active ? "Star Plus · plan actual" : "Star Plus · $1,000/mes";
+      bStar.textContent = plan === "Star" && active ? "Star · plan actual" : `Star · ${PLAN_PRICE.Star}/mes`;
+      bPlus.textContent = plan === "Star Plus" && active ? "Star Plus · plan actual" : `Star Plus · ${PLAN_PRICE["Star Plus"]}/mes`;
     }
     if (manage) manage.classList.toggle("hidden", !PROFILE.stripe_customer_id);
     if (hint) {
@@ -1325,10 +1367,13 @@
       document.head.appendChild(s);
     });
   }
+  const PLAN_PRICE = { Star: "$500 MXN", "Star Plus": "$1,000 MXN" };
   async function startCheckout(plan) {
     try {
       const { data: { session } } = await window.msfSupabase.auth.getSession();
       if (!session) return toast("Sesión expirada, vuelve a entrar", "", "err");
+      $("#checkoutPlanName") && ($("#checkoutPlanName").textContent = plan);
+      $("#checkoutPlanPrice") && ($("#checkoutPlanPrice").textContent = PLAN_PRICE[plan] || "");
       toast("Preparando pago seguro…", "", "info");
       const r = await fetch("/api/checkout", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -1374,6 +1419,35 @@
   $("#btnPlanStarPlus")?.addEventListener("click", () => startCheckout("Star Plus"));
   $("#btnManageSub")?.addEventListener("click", openPortal);
 
+  /* ---------- Facturación (historial interno, sin salir a Stripe) ---------- */
+  const STATUS_LABEL_INV = { paid: "Pagada", open: "Pendiente", void: "Anulada", uncollectible: "Impagable", draft: "Borrador" };
+  async function loadInvoices() {
+    const wrap = $("#invoicesList");
+    if (!wrap) return;
+    try {
+      const { data: { session } } = await window.msfSupabase.auth.getSession();
+      if (!session) return;
+      const r = await fetch("/api/invoices", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ access_token: session.access_token }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || "No se pudo cargar tu historial");
+      if (!data.invoices?.length) { wrap.innerHTML = `<p class="t3 text-sm">Aún no tienes facturas.</p>`; return; }
+      wrap.innerHTML = data.invoices.map((inv) => `
+        <div class="due-row">
+          <div class="due-row__meta">
+            <div class="due-row__name">${api.esc(inv.number || "—")}</div>
+            <div class="due-row__sub">${new Date(inv.date * 1000).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })} · ${api.esc(STATUS_LABEL_INV[inv.status] || inv.status)}${inv.payment_method ? " · " + api.esc(inv.payment_method) : ""}</div>
+          </div>
+          <div class="row gap-3" style="align-items:center">
+            <span class="mono fw-600">$${(inv.amount / 100).toLocaleString("es-MX")}</span>
+            ${inv.pdf ? `<a class="btn btn--ghost btn--sm" href="${inv.pdf}" target="_blank" rel="noopener">PDF</a>` : ""}
+          </div>
+        </div>`).join("");
+    } catch (ex) { wrap.innerHTML = `<p class="t3 text-sm">No se pudo cargar tu historial de facturación.</p>`; console.error(ex); }
+  }
+
   /* Al volver de Stripe: refresca el perfil (el webhook ya sincronizó el plan). */
   async function handleCheckoutReturn() {
     const params = new URLSearchParams(location.search);
@@ -1389,7 +1463,7 @@
       if (fresh?.profile) {
         PROFILE = fresh.profile;
         applyPlanGating();
-        if (PROFILE.subscription_status === "active") { toast("¡Suscripción activa! 🎉", `Plan ${PROFILE.plan}`, "ok"); return; }
+        if (PROFILE.subscription_status === "active") { toast("¡Suscripción activa! 🎉", `Plan ${PROFILE.plan}`, "ok"); window.msfSound?.playSound?.("payment"); return; }
       }
     }
     toast("Pago recibido. Si el plan no cambió, recarga en un momento.", "", "info");
@@ -1419,17 +1493,37 @@
     catch { toast(code, "Cópialo manualmente", "info"); }
   });
 
-  /* ---------- Encuesta diaria (lista del ciclo actual) ----------
-     Muestra a quién asistirá mañana (presencial), quién entrenó hoy (online),
-     horario elegido o motivo de ausencia. Persiste hasta "Reiniciar Día". */
+  /* ---------- Asistencia Programada (lista del ciclo actual) ----------
+     Muestra a quién asistirá mañana (presencial) y quién entrenó hoy (online)
+     en dos bloques fijos, con horario elegido o motivo de ausencia.
+     Persiste hasta "Reiniciar Día". */
   let ATTENDANCE_ROWS = [];
-  let attFilter = { text: "", mode: "all", resp: "all", sort: "time" };
-  function renderAttendanceList() {
-    const wrap = $("#attendanceToday");
-    const statsWrap = $("#attStats");
+  let attFilter = { text: "", resp: "all", sort: "time" };
+  function renderAttendanceRows(wrap, rows) {
     if (!wrap) return;
+    if (!rows.length) { wrap.innerHTML = `<p class="t3 text-sm">Sin resultados.</p>`; return; }
+    wrap.innerHTML = rows.map((r) => {
+      const s = r.students || {};
+      const isPresencial = s.training_type === "Presencial";
+      const day = new Date(r.attend_date + "T00:00:00").toLocaleDateString("es-MX", { weekday: "short", day: "numeric", month: "short" });
+      const sub = r.response === "yes"
+        ? `${isPresencial ? "Asistirá" : "Entrenó"} · ${r.scheduled_time ? r.scheduled_time.slice(0, 5) : "—"} · ${api.esc(day)}`
+        : `${isPresencial ? "No asistirá" : "No entrenó"} · ${api.esc(r.reason || "sin motivo")}`;
+      return `<div class="due-row">
+        <div class="avatar avatar--sm">${api.initials(s.full_name)}</div>
+        <div class="due-row__meta"><div class="due-row__name">${api.esc(s.full_name || "Alumno")}</div><div class="due-row__sub">${sub}</div></div>
+        <span class="badge ${r.response === "yes" ? "badge--ok" : "badge--late"}">${r.response === "yes" ? "Sí" : "No"}</span>
+      </div>`;
+    }).join("");
+  }
+  function renderAttendanceList() {
+    const presWrap = $("#attendanceTodayPresencial");
+    const onlineWrap = $("#attendanceTodayOnline");
+    const statsWrap = $("#attStats");
+    if (!presWrap || !onlineWrap) return;
     if (!ATTENDANCE_ROWS.length) {
-      wrap.innerHTML = `<p class="t3 text-sm">Aún nadie ha respondido la encuesta de hoy. Cuando tus alumnos respondan, aparecerán aquí.</p>`;
+      const empty = `<p class="t3 text-sm">Aún nadie ha respondido hoy.</p>`;
+      presWrap.innerHTML = empty; onlineWrap.innerHTML = empty;
       $("#attendanceSummary") && ($("#attendanceSummary").textContent = "");
       if (statsWrap) statsWrap.innerHTML = "";
       return;
@@ -1444,7 +1538,6 @@
     let list = ATTENDANCE_ROWS.filter((r) => {
       const s = r.students || {};
       if (attFilter.text && !s.full_name?.toLowerCase().includes(attFilter.text.toLowerCase())) return false;
-      if (attFilter.mode !== "all" && s.training_type !== attFilter.mode) return false;
       if (attFilter.resp !== "all" && r.response !== attFilter.resp) return false;
       return true;
     });
@@ -1453,31 +1546,22 @@
       return (a.scheduled_time || "99:99").localeCompare(b.scheduled_time || "99:99");
     });
 
-    if (!list.length) { wrap.innerHTML = `<p class="t3 text-sm">Sin resultados para este filtro.</p>`; return; }
-    wrap.innerHTML = list.map((r) => {
-      const s = r.students || {};
-      const isPresencial = s.training_type === "Presencial";
-      const day = new Date(r.attend_date + "T00:00:00").toLocaleDateString("es-MX", { weekday: "short", day: "numeric", month: "short" });
-      const sub = r.response === "yes"
-        ? `${isPresencial ? "Asistirá" : "Entrenó"} · ${r.scheduled_time ? r.scheduled_time.slice(0, 5) : "—"} · ${api.esc(day)}`
-        : `${isPresencial ? "No asistirá" : "No entrenó"} · ${api.esc(r.reason || "sin motivo")}`;
-      return `<div class="due-row">
-        <div class="avatar avatar--sm">${api.initials(s.full_name)}</div>
-        <div class="due-row__meta"><div class="due-row__name">${api.esc(s.full_name || "Alumno")} <span class="t3 fs-13">· ${isPresencial ? "Presencial" : "Online"}</span></div><div class="due-row__sub">${sub}</div></div>
-        <span class="badge ${r.response === "yes" ? "badge--ok" : "badge--late"}">${r.response === "yes" ? "Sí" : "No"}</span>
-      </div>`;
-    }).join("");
+    renderAttendanceRows(presWrap, list.filter((r) => r.students?.training_type === "Presencial"));
+    renderAttendanceRows(onlineWrap, list.filter((r) => r.students?.training_type !== "Presencial"));
   }
   async function renderAttendanceToday() {
-    const wrap = $("#attendanceToday");
+    const wrap = $("#attendanceTodayPresencial");
     if (!wrap) return;
     try {
       ATTENDANCE_ROWS = await api.listCoachAttendance();
       renderAttendanceList();
-    } catch (ex) { wrap.innerHTML = `<p class="t3 text-sm">No se pudo cargar la encuesta.</p>`; }
+    } catch (ex) {
+      const msg = `<p class="t3 text-sm">No se pudo cargar la asistencia.</p>`;
+      $("#attendanceTodayPresencial").innerHTML = msg;
+      $("#attendanceTodayOnline").innerHTML = msg;
+    }
   }
   $("#attSearch")?.addEventListener("input", (e) => { attFilter.text = e.target.value; renderAttendanceList(); });
-  $("#attFilterMode")?.addEventListener("change", (e) => { attFilter.mode = e.target.value; renderAttendanceList(); });
   $("#attFilterResp")?.addEventListener("change", (e) => { attFilter.resp = e.target.value; renderAttendanceList(); });
   $("#attSort")?.addEventListener("change", (e) => { attFilter.sort = e.target.value; renderAttendanceList(); });
   $("#btnResetAttendance")?.addEventListener("click", async () => {
@@ -1518,6 +1602,12 @@
       .on("postgres_changes", { event: "*", schema: "public", table: "attendance", filter: `coach_id=eq.${PROFILE.id}` }, () => {
         renderAttendanceToday();
       })
+      // Notificaciones (ej. alumno cambió su objetivo) — llegan sin recargar
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `coach_id=eq.${PROFILE.id}` }, (payload) => {
+        DB_NOTIFICATIONS = [payload.new, ...DB_NOTIFICATIONS];
+        renderNotifications();
+        window.msfSound?.playSound?.("notify");
+      })
       // Comunidad: comentarios/likes de alumnos en vivo
       .on("postgres_changes", { event: "*", schema: "public", table: "community_posts", filter: `coach_id=eq.${PROFILE.id}` }, () => {
         if ($("#view-comunidad")?.classList.contains("is-active")) renderCommunity();
@@ -1540,32 +1630,40 @@
   /* ---------- Init ---------- */
   /* ---------- Catálogo de objetivos del coach ---------- */
   let OBJECTIVES = [];
+  function objectiveRow(o, deletable) {
+    return `<div class="due-row">
+      <div class="due-row__meta">
+        <div class="due-row__name">${api.esc(o.title)}</div>
+        <div class="due-row__sub">${o.goal_type ? api.esc(o.goal_type) : "Cualquier objetivo"}${o.description ? " · " + api.esc(o.description) : ""}</div>
+      </div>
+      ${deletable ? `<button class="icon-btn js-del-objective" data-id="${o.id}" title="Eliminar">
+        <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      </button>` : ""}
+    </div>`;
+  }
   async function renderObjectives() {
     const list = $("#objectivesList");
     if (!list) return;
     try {
-      OBJECTIVES = await api.listObjectives(PROFILE.id);
+      OBJECTIVES = await api.listCatalogAndCustom(PROFILE.id);
       updateObjectiveReminder();
-      if (!OBJECTIVES.length) {
-        list.innerHTML = `<p class="t3 text-sm">Aún no has creado objetivos. Crea el primero arriba.</p>`;
-        return;
+      const system = OBJECTIVES.filter((o) => o.is_system);
+      const custom = OBJECTIVES.filter((o) => !o.is_system);
+      const parts = [];
+      parts.push(`<div class="t3 text-sm fw-600 mb-4">Catálogo del sistema</div>`);
+      parts.push(system.map((o) => objectiveRow(o, false)).join(""));
+      if (custom.length) {
+        parts.push(`<div class="t3 text-sm fw-600 mt-6 mb-4">Tus objetivos personalizados</div>`);
+        parts.push(custom.map((o) => objectiveRow(o, true)).join(""));
       }
-      list.innerHTML = OBJECTIVES.map((o) => `
-        <div class="due-row">
-          <div class="due-row__meta">
-            <div class="due-row__name">${api.esc(o.title)}</div>
-            <div class="due-row__sub">${o.goal_type ? api.esc(o.goal_type) : "Cualquier objetivo"}${o.description ? " · " + api.esc(o.description) : ""}</div>
-          </div>
-          <button class="icon-btn js-del-objective" data-id="${o.id}" title="Eliminar">
-            <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-          </button>
-        </div>`).join("");
+      list.innerHTML = parts.join("");
     } catch (ex) { errToast(ex, "No se pudo cargar el catálogo de objetivos"); }
   }
-  /* Recordatorio en toda la app mientras el coach tenga menos de 3 objetivos.
-     Desaparece automáticamente al llegar a 3. */
+  /* Recordatorio (Star+) mientras el coach tenga menos de 3 objetivos
+     PERSONALIZADOS (el catálogo de sistema no cuenta). Nunca se muestra en Free. */
   function updateObjectiveReminder() {
-    const show = OBJECTIVES.length < 3;
+    const customCount = OBJECTIVES.filter((o) => !o.is_system).length;
+    const show = !!FEATURES?.objectives && customCount < 3;
     const dash = $("#objReminderDash");
     if (dash) dash.style.display = show ? "flex" : "none";
     const ajustes = $("#objReminderSettings");
@@ -1575,6 +1673,7 @@
   function wireObjectives() {
     $("#formObjective")?.addEventListener("submit", async (e) => {
       e.preventDefault();
+      if (!FEATURES?.objectives) { toast("Función premium", "Actualiza a Star para crear objetivos personalizados", "info"); return; }
       const title = $("#objTitle").value.trim();
       if (!title) return;
       try {
@@ -1582,6 +1681,7 @@
         $("#objTitle").value = ""; $("#objDesc").value = ""; $("#objGoalType").value = "";
         await renderObjectives();
         toast("Objetivo añadido", "Se asignará automáticamente a los alumnos que coincidan", "ok");
+        window.msfSound?.playSound?.("save");
       } catch (ex) { errToast(ex, "No se pudo crear el objetivo"); }
     });
     $("#objectivesList")?.addEventListener("click", async (e) => {
@@ -1615,7 +1715,7 @@
     try {
       const [assigned, catalog] = await Promise.all([
         api.listStudentObjectives(studentId),
-        OBJECTIVES.length ? Promise.resolve(OBJECTIVES) : api.listObjectives(PROFILE.id),
+        OBJECTIVES.length ? Promise.resolve(OBJECTIVES) : api.listCatalogAndCustom(PROFILE.id),
       ]);
       OBJECTIVES = catalog;
       const assignedIds = new Set(assigned.map((a) => a.objective_id));
@@ -1679,6 +1779,7 @@
     runCountUp();
     initChartTooltips();
     renderNotifications();
+    loadNotifications();
     fillRoutineSelect();
     renderAccentSwatches();
     renderAttendanceToday();
