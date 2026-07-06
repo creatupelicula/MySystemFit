@@ -120,8 +120,8 @@
       <div class="field"><label>Email</label><input class="input" type="email" id="suEmail" required autocomplete="email"></div>
       <div class="field"><label>Contraseña</label><input class="input" type="password" id="suPassword" required minlength="6" autocomplete="new-password"></div>
       <div class="field" id="suCoachIdField">
-        <label for="suCoachId">ID de tu coach</label>
-        <input class="input" id="suCoachId" placeholder="Tu coach te lo comparte">
+        <label for="suCoachId">Código o ID de tu coach</label>
+        <input class="input" id="suCoachId" placeholder="Ej. MSF-AB12CD">
       </div>
       <div class="field hidden" id="suCoachLinked">
         <div class="badge badge--ok" style="width:100%;justify-content:center;height:38px">✓ Invitación de tu coach detectada</div>
@@ -429,14 +429,21 @@
       if (signupRole === "coach") {
         await window.msfAuth.signUpCoach(email, pass, name, $("#suRefCode").value.trim());
       } else {
-        const coachId = pendingCoach() || $("#suCoachId").value.trim();
-        if (!coachId) throw new Error("Necesitas el ID o el enlace de invitación de tu coach para registrarte.");
+        let coachId = pendingCoach() || $("#suCoachId").value.trim();
+        if (!coachId) throw new Error("Necesitas el código o el enlace de invitación de tu coach para registrarte.");
         if (!UUID_RE.test(coachId)) {
-          throw new Error("Ese ID de coach no tiene el formato correcto. Pídeselo de nuevo a tu coach.");
+          // No es un UUID (enlace de invitación) — asumimos que es el código
+          // amigable MSF-XXXXXX que el coach comparte desde Ajustes/Referidos,
+          // y lo resolvemos a su ID real antes de registrar al alumno.
+          const { data: resolvedId, error: codeErr } = await window.msfSupabase.rpc("coach_id_by_code", { code: coachId });
+          if (codeErr) throw codeErr;
+          if (!resolvedId) throw new Error("Ese código de coach no es válido. Verifícalo con tu coach.");
+          coachId = resolvedId;
+        } else {
+          const { data: ok, error: rpcErr } = await window.msfSupabase.rpc("coach_exists", { cid: coachId });
+          if (rpcErr) throw rpcErr;
+          if (!ok) throw new Error("No encontramos ningún coach con ese ID. Verifícalo con tu coach.");
         }
-        const { data: ok, error: rpcErr } = await window.msfSupabase.rpc("coach_exists", { cid: coachId });
-        if (rpcErr) throw rpcErr;
-        if (!ok) throw new Error("No encontramos ningún coach con ese ID. Verifícalo con tu coach.");
         await window.msfAuth.signUpStudent(email, pass, name, coachId);
         localStorage.removeItem(PENDING_COACH_KEY);
       }
