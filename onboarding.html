@@ -12,7 +12,7 @@
 <script src="assets/js/theme.js"></script>
 <style>
   .ob-overlay{position:fixed;inset:0;z-index:200;background:var(--bg-0,#0a0a0f);display:flex;flex-direction:column;overflow-y:auto}
-  .ob-inner{width:100%;max-width:520px;margin:auto;padding:28px 22px 40px}
+  .ob-inner{width:100%;max-width:560px;margin:auto;padding:28px 22px 40px}
   .ob-progress{height:6px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;margin-bottom:6px}
   .ob-progress__bar{height:100%;background:linear-gradient(90deg,var(--indigo-hi,#7c8cff),var(--lime,#b6f36b));border-radius:99px;transition:width .35s ease;width:20%}
   .ob-step-count{font-size:12px;color:var(--text-3);margin-bottom:26px;text-align:right}
@@ -31,6 +31,17 @@
   .ob-nav{display:flex;gap:10px;margin-top:28px}
   .ob-nav .btn{flex:1}
   .ob-err{color:var(--coral,#ff6b6b);font-size:13px;margin-top:12px;display:none}
+  .ob-obj-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border:1px solid var(--border,#26262e);border-radius:12px;margin-bottom:8px}
+  .ob-obj-item__t{font-weight:600;font-size:14px}
+  .ob-obj-item__s{font-size:12px;color:var(--text-3)}
+  .ob-obj-count{font-size:13px;color:var(--text-2);margin:14px 0 6px}
+  .ob-modes{display:flex;gap:10px}
+  .ob-modes .ob-choice{flex:1;justify-content:center;text-align:center;flex-direction:column;gap:6px}
+  .ob-reco{display:none;animation:obIn .35s ease;text-align:center}
+  .ob-reco.active{display:block}
+  .ob-reco__badge{font-size:12px;color:var(--text-3);letter-spacing:.04em;text-transform:uppercase;margin-bottom:10px}
+  .ob-reco__plan{font-family:var(--font-display);font-size:30px;font-weight:700;letter-spacing:-.03em;margin-bottom:14px}
+  .ob-reco__why{font-size:14px;color:var(--text-2);line-height:1.6;padding:16px 18px;border:1px solid var(--border,#26262e);border-radius:14px;background:var(--bg-1,#13131a);text-align:left;margin-bottom:8px}
 </style>
 </head>
 <body>
@@ -41,12 +52,14 @@
       <div class="brand__logo"><svg viewBox="0 0 24 24" width="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5 17.5 17.5M4 12l4-4M16 16l4-4M8 4l12 12M4 8l12 12"/></svg></div>
       <div class="brand__name">MySystem<span class="text-gradient">Fit</span></div>
     </div>
-    <div class="ob-progress"><div class="ob-progress__bar" id="obBar"></div></div>
-    <div class="ob-step-count"><span id="obStepNum">1</span> / <span id="obTotal">5</span></div>
+    <div id="obProgressWrap">
+      <div class="ob-progress"><div class="ob-progress__bar" id="obBar"></div></div>
+      <div class="ob-step-count"><span id="obStepNum">1</span> / <span id="obTotal">7</span></div>
+    </div>
 
     <!-- 1. Nombre completo -->
     <div class="ob-step active" data-step="1">
-      <div class="ob-q">Confirma tu nombre completo</div>
+      <div class="ob-q">¿Cómo te gustaría que aparezca tu nombre?</div>
       <div class="ob-hint">Así te verán tus alumnos dentro de la plataforma.</div>
       <div class="field"><label for="obFullName">Nombre completo *</label><input class="input" type="text" id="obFullName" maxlength="80" placeholder="Ej. Ana Martínez"></div>
     </div>
@@ -58,34 +71,76 @@
       <div class="field"><label for="obPhone">Celular *</label><input class="input" type="tel" id="obPhone" inputmode="tel" placeholder="Ej. 55 1234 5678"></div>
     </div>
 
-    <!-- 3. Años de experiencia -->
+    <!-- 3. Ciudad/país -->
     <div class="ob-step" data-step="3">
-      <div class="ob-q">¿Cuántos años de experiencia tienes como coach?</div>
-      <div class="ob-hint">Un número aproximado está bien.</div>
-      <div class="field"><label for="obYears">Años de experiencia *</label><input class="input" type="number" min="0" max="60" step="1" id="obYears" inputmode="numeric" placeholder="Ej. 3"></div>
+      <div class="ob-q">¿En qué ciudad o país trabajas?</div>
+      <div class="ob-hint">Nos ayuda a conocerte mejor. Podrás editarlo después.</div>
+      <div class="field"><label for="obLocation">Ciudad o país *</label><input class="input" type="text" id="obLocation" maxlength="100" placeholder="Ej. Ciudad de México, México"></div>
     </div>
 
-    <!-- 4. Especialidad -->
+    <!-- 4. Años de experiencia -->
     <div class="ob-step" data-step="4">
-      <div class="ob-q">¿Cuál es tu especialidad principal?</div>
-      <div class="ob-hint">Ayuda a tus alumnos a saber en qué eres experto.</div>
-      <div class="ob-choices" data-field="specialty" data-single id="obSpecialtyChoices">
-        <div class="ob-choice" data-value="Fitness general"><span class="ob-choice__emoji">🏋️</span><div><div class="ob-choice__t">Fitness general</div></div></div>
-        <div class="ob-choice" data-value="Hipertrofia"><span class="ob-choice__emoji">💪</span><div><div class="ob-choice__t">Hipertrofia</div></div></div>
-        <div class="ob-choice" data-value="Pérdida de grasa"><span class="ob-choice__emoji">🔥</span><div><div class="ob-choice__t">Pérdida de grasa</div></div></div>
-        <div class="ob-choice" data-value="Nutrición"><span class="ob-choice__emoji">🥗</span><div><div class="ob-choice__t">Nutrición</div></div></div>
-        <div class="ob-choice" data-value="Otro"><span class="ob-choice__emoji">✨</span><div><div class="ob-choice__t">Otro</div></div></div>
-      </div>
-      <div id="obSpecialtyFreeWrap" class="hidden mt-4">
-        <div class="field"><label for="obSpecialtyText">¿Cuál?</label><input class="input" type="text" id="obSpecialtyText" maxlength="60" placeholder="Ej. Movilidad y rehabilitación"></div>
+      <div class="ob-q">¿Cuántos años de experiencia tienes como coach?</div>
+      <div class="ob-hint">Elige la opción que mejor te describa.</div>
+      <div class="ob-choices" data-field="years" data-single>
+        <div class="ob-choice" data-value="Menos de 1 año"><span class="ob-choice__emoji">🌱</span><div><div class="ob-choice__t">Menos de 1 año</div></div></div>
+        <div class="ob-choice" data-value="1 a 3 años"><span class="ob-choice__emoji">💪</span><div><div class="ob-choice__t">1 a 3 años</div></div></div>
+        <div class="ob-choice" data-value="4 a 7 años"><span class="ob-choice__emoji">🔥</span><div><div class="ob-choice__t">4 a 7 años</div></div></div>
+        <div class="ob-choice" data-value="Más de 7 años"><span class="ob-choice__emoji">🏆</span><div><div class="ob-choice__t">Más de 7 años</div></div></div>
       </div>
     </div>
 
-    <!-- 5. Bio -->
+    <!-- 5. Número de alumnos actuales -->
     <div class="ob-step" data-step="5">
-      <div class="ob-q">Cuéntanos brevemente sobre ti</div>
-      <div class="ob-hint">Tus alumnos podrán ver esta descripción de tu perfil.</div>
-      <div class="field"><textarea class="input" id="obBio" style="min-height:110px;resize:vertical" maxlength="400" placeholder="Ej. Entrenador certificado especializado en fuerza funcional…"></textarea></div>
+      <div class="ob-q">¿Cuántos alumnos tienes actualmente?</div>
+      <div class="ob-hint">Aunque todavía no los hayas registrado en MySystemFit.</div>
+      <div class="field"><label for="obStudentCount">Número de alumnos *</label><input class="input" type="number" id="obStudentCount" min="0" max="9999" inputmode="numeric" placeholder="Ej. 12"></div>
+    </div>
+
+    <!-- 6. Modalidad de trabajo -->
+    <div class="ob-step" data-step="6">
+      <div class="ob-q">¿Cómo impartes tus entrenamientos?</div>
+      <div class="ob-hint">Puedes elegir uno o ambos (ambos = híbrido).</div>
+      <div class="ob-modes">
+        <div class="ob-choice" data-value="presencial"><span class="ob-choice__emoji">🏋️</span><div class="ob-choice__t">Presencial</div></div>
+        <div class="ob-choice" data-value="online"><span class="ob-choice__emoji">💻</span><div class="ob-choice__t">Online</div></div>
+      </div>
+    </div>
+
+    <!-- 7. Objetivo principal del negocio -->
+    <div class="ob-step" data-step="7">
+      <div class="ob-q">¿Cuál es el objetivo principal de tu negocio ahora mismo?</div>
+      <div class="ob-hint">Elige la opción que más se acerque a lo que buscas.</div>
+      <div class="ob-choices" data-field="goal" data-single>
+        <div class="ob-choice" data-value="Conseguir más clientes"><span class="ob-choice__emoji">📈</span><div><div class="ob-choice__t">Conseguir más clientes</div></div></div>
+        <div class="ob-choice" data-value="Organizar mejor mis alumnos"><span class="ob-choice__emoji">🗂️</span><div><div class="ob-choice__t">Organizar mejor mis alumnos</div></div></div>
+        <div class="ob-choice" data-value="Automatizar mi negocio"><span class="ob-choice__emoji">⚙️</span><div><div class="ob-choice__t">Automatizar mi negocio</div></div></div>
+        <div class="ob-choice" data-value="Dar seguimiento profesional"><span class="ob-choice__emoji">🎯</span><div><div class="ob-choice__t">Dar seguimiento profesional</div></div></div>
+        <div class="ob-choice" data-value="Ahorrar tiempo administrativo"><span class="ob-choice__emoji">⏱️</span><div><div class="ob-choice__t">Ahorrar tiempo administrativo</div></div></div>
+      </div>
+    </div>
+
+    <!-- Pantalla de recomendación (no es un "paso" numerado, cierra la Parte 1) -->
+    <div class="ob-reco" id="obReco">
+      <div class="ob-reco__badge">Recomendación para ti</div>
+      <div class="ob-reco__plan" id="obRecoPlan">Plan Star</div>
+      <div class="ob-reco__why" id="obRecoWhy"></div>
+    </div>
+
+    <!-- Objetivos (condicional al plan ya elegido) — único paso de la Parte 2 -->
+    <div class="ob-step" data-step="obj">
+      <div class="ob-q">Objetivos para tus alumnos</div>
+      <div id="obObjFreeMsg" class="hidden" style="padding:14px 16px;border-radius:14px;border:1px solid var(--border,#26262e);background:var(--bg-1,#13131a);font-size:14px;color:var(--text-2)">
+        El Plan Gratuito incluye objetivos predeterminados. Podrás crear objetivos personalizados al actualizar a un plan superior.
+      </div>
+      <div id="obObjPaidWrap" class="hidden">
+        <div class="ob-hint">Crea al menos 3 objetivos personalizados (ej. Pérdida de grasa, Hipertrofia, Acondicionamiento físico). Se asignarán automáticamente a tus alumnos nuevos y podrás editarlos después en el módulo de Objetivos.</div>
+        <div class="field"><input class="input" id="obObjTitle" placeholder="Título (ej. Pérdida de grasa)" maxlength="80"></div>
+        <textarea class="input" id="obObjDesc" placeholder="Descripción (opcional)" style="min-height:56px;resize:vertical" maxlength="300"></textarea>
+        <button type="button" class="btn btn--ghost btn--sm mt-4" id="obAddObjective">Añadir objetivo</button>
+        <div class="ob-obj-count" id="obObjCount">0/3 mínimo</div>
+        <div id="obObjList"></div>
+      </div>
     </div>
 
     <div class="ob-err" id="obError"></div>
@@ -102,27 +157,43 @@
 <script src="assets/js/auth.js"></script>
 <script src="assets/js/api.js"></script>
 <script src="assets/js/sound.js"></script>
+<script src="assets/js/checkout-shared.js"></script>
 <script>
 (async () => {
   const $ = (s) => document.querySelector(s);
+  const api = window.msfApi;
   const auth = await window.msfAuth.requireRole("coach");
   if (!auth) return;
   const profile = auth.profile;
-  if (profile.onboarding_completed) {
-    window.location.href = profile.plan_selected ? "index.html" : "select-plan.html";
+
+  if (profile.basic_info_completed && profile.onboarding_completed) {
+    window.location.href = "index.html";
+    return;
+  }
+  if (profile.basic_info_completed && !profile.plan_selected) {
+    window.location.href = "select-plan.html";
     return;
   }
 
-  $("#obFullName").value = profile.full_name || "";
-  $("#obPhone").value = profile.phone || "";
-
-  const answers = {};
-  let step = 1;
-  const TOTAL = 5;
   const overlay = $("#onboarding");
+  const bar = $("#obBar"), stepNum = $("#obStepNum"), obTotal = $("#obTotal"),
+        backBtn = $("#obBack"), nextBtn = $("#obNext"), errEl = $("#obError"),
+        reco = $("#obReco"), progressWrap = $("#obProgressWrap");
   const stepEl = (n) => overlay.querySelector(`.ob-step[data-step="${n}"]`);
-  const bar = $("#obBar"), stepNum = $("#obStepNum"),
-        backBtn = $("#obBack"), nextBtn = $("#obNext"), errEl = $("#obError");
+
+  // Parte 1 (pasos 1-7): datos básicos + recomendación de plan. Parte 2 (objetivos):
+  // solo se llega aquí si basic_info_completed ya es true (retoma directo).
+  const PART1 = [1, 2, 3, 4, 5, 6, 7];
+  const PART2 = ["obj"];
+  const steps = profile.basic_info_completed ? PART2 : PART1;
+  let idx = 0; // índice dentro de `steps`
+  let showingReco = false;
+  const answers = {};
+
+  if (!profile.basic_info_completed) {
+    $("#obFullName").value = profile.full_name || "";
+    $("#obPhone").value = profile.phone || "";
+  }
 
   overlay.querySelectorAll("[data-single]").forEach((group) => {
     const field = group.getAttribute("data-field");
@@ -132,63 +203,139 @@
       group.querySelectorAll("[data-value]").forEach((o) => o.classList.remove("sel"));
       opt.classList.add("sel");
       answers[field] = opt.getAttribute("data-value");
-      $("#obSpecialtyFreeWrap").classList.toggle("hidden", answers[field] !== "Otro");
       errEl.style.display = "none";
     });
   });
+  // Modo de entrenamiento: multi-selección (no exclusiva).
+  const trainingModes = new Set();
+  overlay.querySelector(".ob-modes").addEventListener("click", (e) => {
+    const opt = e.target.closest("[data-value]");
+    if (!opt) return;
+    const v = opt.getAttribute("data-value");
+    if (trainingModes.has(v)) { trainingModes.delete(v); opt.classList.remove("sel"); }
+    else { trainingModes.add(v); opt.classList.add("sel"); }
+    errEl.style.display = "none";
+  });
+
+  let objectives = [];
+  async function refreshObjectives() {
+    objectives = await api.listObjectives(profile.id);
+    $("#obObjCount").textContent = `${objectives.length}/3 mínimo`;
+    $("#obObjList").innerHTML = objectives.map((o) => `
+      <div class="ob-obj-item">
+        <div><div class="ob-obj-item__t">${api.esc(o.title)}</div>${o.goal_type ? `<div class="ob-obj-item__s">${api.esc(o.goal_type)}</div>` : ""}</div>
+      </div>`).join("");
+  }
+  $("#obAddObjective")?.addEventListener("click", async () => {
+    const title = $("#obObjTitle").value.trim();
+    if (!title) return;
+    $("#obAddObjective").disabled = true;
+    try {
+      await api.createObjective(profile.id, title, $("#obObjDesc").value.trim(), "");
+      $("#obObjTitle").value = ""; $("#obObjDesc").value = "";
+      window.msfSound?.playSound?.("save");
+      await refreshObjectives();
+    } catch (ex) { errEl.textContent = api.friendlyError(ex); errEl.style.display = "block"; }
+    finally { $("#obAddObjective").disabled = false; }
+  });
 
   function render() {
+    if (showingReco) {
+      overlay.querySelectorAll(".ob-step").forEach((s) => s.classList.remove("active"));
+      progressWrap.style.display = "none";
+      reco.classList.add("active");
+      backBtn.style.display = "";
+      nextBtn.textContent = "Ver planes";
+      errEl.style.display = "none";
+      return;
+    }
+    reco.classList.remove("active");
+    progressWrap.style.display = "";
+    const step = steps[idx];
     overlay.querySelectorAll(".ob-step").forEach((s) => s.classList.remove("active"));
     stepEl(step).classList.add("active");
-    bar.style.width = Math.round((step / TOTAL) * 100) + "%";
-    stepNum.textContent = step;
-    backBtn.style.display = step === 1 ? "none" : "";
-    nextBtn.textContent = step === TOTAL ? "Terminar 🚀" : "Siguiente";
+    const total = steps.length;
+    bar.style.width = Math.round(((idx + 1) / total) * 100) + "%";
+    stepNum.textContent = idx + 1; obTotal.textContent = total;
+    backBtn.style.display = idx === 0 ? "none" : "";
+    nextBtn.textContent = (steps === PART1 && idx === steps.length - 1) ? "Ver recomendación" : (idx === steps.length - 1 ? "Terminar 🚀" : "Siguiente");
     errEl.style.display = "none";
+    if (step === "obj") {
+      const isFree = profile.plan === "Free";
+      $("#obObjFreeMsg").classList.toggle("hidden", !isFree);
+      $("#obObjPaidWrap").classList.toggle("hidden", isFree);
+      if (!isFree) refreshObjectives();
+    }
   }
   function fail(msg) { errEl.textContent = msg; errEl.style.display = "block"; return false; }
-  function specialtyValue() {
-    return answers.specialty === "Otro" ? $("#obSpecialtyText").value.trim() : (answers.specialty || "");
-  }
   function validate() {
+    const step = steps[idx];
     if (step === 1 && !$("#obFullName").value.trim()) return fail("Escribe tu nombre completo.");
     if (step === 2 && !$("#obPhone").value.trim()) return fail("Escribe tu número de celular.");
-    if (step === 3) {
-      const v = parseInt($("#obYears").value, 10);
-      if (!(v >= 0 && v <= 60)) return fail("Escribe tus años de experiencia (0-60).");
-    }
-    if (step === 4 && !specialtyValue()) return fail("Elige tu especialidad.");
-    // paso 5 (bio) es opcional
+    if (step === 3 && !$("#obLocation").value.trim()) return fail("Escribe tu ciudad o país.");
+    if (step === 4 && !answers.years) return fail("Elige tus años de experiencia.");
+    if (step === 5 && $("#obStudentCount").value === "") return fail("Escribe cuántos alumnos tienes actualmente.");
+    if (step === 6 && trainingModes.size === 0) return fail("Elige al menos un modo de entrenamiento.");
+    if (step === 7 && !answers.goal) return fail("Elige el objetivo principal de tu negocio.");
+    if (step === "obj" && profile.plan !== "Free" && objectives.length < 3) return fail("Crea al menos 3 objetivos antes de continuar.");
     return true;
   }
-  async function finish() {
+  async function finishPart1() {
     nextBtn.disabled = true; nextBtn.textContent = "Guardando…";
     try {
-      const { error } = await window.msfSupabase.rpc("save_coach_onboarding", {
+      const { error } = await window.msfSupabase.rpc("save_coach_basic_info", {
         p_full_name: $("#obFullName").value.trim(),
         p_phone: $("#obPhone").value.trim(),
-        p_years_experience: parseInt($("#obYears").value, 10),
-        p_specialty: specialtyValue(),
-        p_bio: $("#obBio").value.trim(),
+        p_location: $("#obLocation").value.trim(),
+        p_years_experience: answers.years,
+        p_student_count: parseInt($("#obStudentCount").value, 10) || 0,
+        p_training_modes: Array.from(trainingModes),
+        p_business_goal: answers.goal,
       });
       if (error) throw error;
       window.msfSound?.playSound?.("save");
-      window.location.href = profile.plan_selected ? "index.html" : "select-plan.html";
+      window.location.href = "select-plan.html";
+    } catch (ex) {
+      nextBtn.disabled = false; nextBtn.textContent = "Ver planes";
+      fail(api.friendlyError(ex));
+    }
+  }
+  async function finishPart2() {
+    nextBtn.disabled = true; nextBtn.textContent = "Guardando…";
+    try {
+      const { error } = await window.msfSupabase.rpc("finish_coach_onboarding");
+      if (error) throw error;
+      window.msfSound?.playSound?.("save");
+      window.location.href = "index.html";
     } catch (ex) {
       nextBtn.disabled = false; nextBtn.textContent = "Terminar 🚀";
-      fail(ex.message || "No se pudo guardar. Inténtalo de nuevo.");
+      fail(api.friendlyError(ex));
     }
   }
 
   nextBtn.addEventListener("click", () => {
     window.msfSound?.playSound?.("click");
+    if (showingReco) { finishPart1(); return; }
     if (!validate()) return;
-    if (step === TOTAL) { finish(); return; }
-    step++; render();
+    if (idx === steps.length - 1) {
+      if (steps === PART1) {
+        const students = parseInt($("#obStudentCount").value, 10) || 0;
+        const plan = window.msfCheckout.recommendPlan({ students, goal: answers.goal });
+        $("#obRecoPlan").textContent = `Plan ${plan}`;
+        $("#obRecoWhy").textContent = window.msfCheckout.recommendationText(plan, { students, goal: answers.goal });
+        showingReco = true;
+        render();
+      } else {
+        finishPart2();
+      }
+      return;
+    }
+    idx++; render();
   });
   backBtn.addEventListener("click", () => {
     window.msfSound?.playSound?.("click");
-    if (step > 1) { step--; render(); }
+    if (showingReco) { showingReco = false; render(); return; }
+    if (idx > 0) { idx--; render(); }
   });
 
   render();
@@ -196,3 +343,4 @@
 </script>
 </body>
 </html>
+</content>

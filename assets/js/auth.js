@@ -12,7 +12,20 @@ window.msfAuth = (function () {
       .select("*")
       .eq("id", session.user.id)
       .single();
-    if (error) return null;
+    if (error || !profile) {
+      // El perfil ya no existe (cuenta eliminada) pero el navegador conservaba
+      // una sesión vieja: limpia la sesión local y avisa en el próximo login
+      // en vez de dejar la pestaña "logueada" contra una cuenta borrada.
+      await sb().auth.signOut();
+      try { sessionStorage.setItem("msf_account_deleted", "1"); } catch (_) { /* noop */ }
+      return null;
+    }
+    // Aviso perezoso de "tu mes de cortesía termina pronto" (sin cron): se
+    // revisa en cada sesión; la RPC es idempotente (gift_warned_at) y no
+    // bloquea el login si falla.
+    if (profile.role === "coach" && profile.gift_ends_at && !profile.gift_warned_at) {
+      Promise.resolve(sb().rpc("check_gift_warning")).catch(() => {});
+    }
     return { session, profile };
   }
 
@@ -32,25 +45,28 @@ window.msfAuth = (function () {
   }
 
   /* Única fuente de verdad de a dónde debe ir un coach después de autenticarse:
-     primero completa su perfil (onboarding), luego elige plan, y solo entonces
-     entra al dashboard. La usan login.html y requireCoachReady(). */
+     primero completa los datos básicos (pasos 1-3 del onboarding), luego
+     elige plan, luego termina el onboarding (objetivos + modo, pasos 4-5),
+     y solo entonces entra al dashboard. La usan login.html y requireCoachReady(). */
   function coachLandingPage(profile) {
-    if (!profile.onboarding_completed) return "onboarding.html";
+    if (!profile.basic_info_completed) return "onboarding.html";
     if (!profile.plan_selected) return "select-plan.html";
+    if (!profile.onboarding_completed) return "onboarding.html";
     return "index.html";
   }
 
-  /* Como requireRole("coach") pero además exige haber completado el
-     onboarding y la selección de plan antes de dejar pasar al dashboard. */
+  /* Como requireRole("coach") pero además exige haber pasado por las 4 etapas
+     de coachLandingPage() antes de dejar pasar al dashboard. */
   async function requireCoachReady() {
     const result = await requireRole("coach");
     if (!result) return null;
     const params = new URLSearchParams(location.search);
-    if (!result.profile.onboarding_completed) { window.location.href = "onboarding.html"; return null; }
+    if (!result.profile.basic_info_completed) { window.location.href = "onboarding.html"; return null; }
     if (!result.profile.plan_selected && params.get("checkout") !== "success") {
       window.location.href = "select-plan.html";
       return null;
     }
+    if (!result.profile.onboarding_completed) { window.location.href = "onboarding.html"; return null; }
     return result;
   }
 

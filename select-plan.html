@@ -96,21 +96,27 @@
   const auth = await window.msfAuth.requireRole("coach");
   if (!auth) return;
   const profile = auth.profile;
-  if (!profile.onboarding_completed) { window.location.href = "onboarding.html"; return; }
+  if (!profile.basic_info_completed) { window.location.href = "onboarding.html"; return; }
   const params = new URLSearchParams(location.search);
   if (profile.plan_selected && params.get("checkout") !== "success") {
-    window.location.href = "index.html";
+    window.location.href = profile.onboarding_completed ? "index.html" : "onboarding.html";
     return;
   }
 
   const okIco = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
   const noIco = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
   const FEATURE_LABEL = { messages: "Mensajes con tus alumnos", objectives: "Objetivos personalizados", photos: "Fotos de progreso", community: "Comunidad", routines: "Rutinas de entrenamiento" };
+  // El plan recomendado se calcula con las respuestas del onboarding (mismo
+  // cálculo que la pantalla de recomendación); si el coach es antiguo y no
+  // tiene esos datos, cae en "Star" como sugerencia general por defecto.
+  const recommended = (profile.current_students_count != null || profile.business_goal)
+    ? window.msfCheckout.recommendPlan({ students: profile.current_students_count, goal: profile.business_goal })
+    : "Star";
   const PLANS = [
     { key: "Free", cta: "Empezar gratis", ctaClass: "btn--ghost" },
-    { key: "Star", cta: "Elegir Star", ctaClass: "btn--primary", featured: true, badge: "Más recomendado" },
+    { key: "Star", cta: "Elegir Star", ctaClass: "btn--primary" },
     { key: "Star Plus", cta: "Elegir Star Plus", ctaClass: "btn--primary" },
-  ];
+  ].map((p) => p.key === recommended ? { ...p, featured: true, badge: "Recomendado para ti", ctaClass: "btn--primary" } : p);
 
   $("#spGrid").innerHTML = PLANS.map((p) => {
     const features = api.planFeatures(p.key);
@@ -142,7 +148,7 @@
         const { error } = await window.msfSupabase.rpc("choose_free_plan");
         if (error) throw error;
         window.msfSound?.playSound?.("confirm");
-        window.location.href = "index.html";
+        window.location.href = profile.onboarding_completed ? "index.html" : "onboarding.html";
       } catch (ex) {
         btn.disabled = false;
         window.msfCheckout.errToast(ex, "No se pudo activar el plan Free");
@@ -160,7 +166,7 @@
   });
 
   window.msfCheckout.handleCheckoutReturn({
-    onSynced() { window.location.href = "index.html"; },
+    onSynced() { window.location.href = profile.onboarding_completed ? "index.html" : "onboarding.html"; },
   });
 })();
 </script>

@@ -26,8 +26,8 @@ function admin() {
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
-// Valida el JWT del coach y devuelve su perfil (asegura que solo actúe sobre sí mismo).
-async function coachFromToken(accessToken) {
+// Valida el JWT y devuelve el perfil, sin importar el rol (coach o alumno).
+async function userFromToken(accessToken) {
   if (!accessToken) { const e = new Error("No autenticado"); e.status = 401; throw e; }
   const db = admin();
   const { data: { user }, error } = await db.auth.getUser(accessToken);
@@ -35,8 +35,14 @@ async function coachFromToken(accessToken) {
   const { data: profile, error: pErr } = await db
     .from("profiles").select("*").eq("id", user.id).single();
   if (pErr || !profile) { const e = new Error("Perfil no encontrado"); e.status = 404; throw e; }
-  if (profile.role !== "coach") { const e = new Error("Solo los coaches gestionan suscripción"); e.status = 403; throw e; }
   return { db, user, profile };
+}
+
+// Como userFromToken, pero exige que el perfil sea de un coach (asegura que solo actúe sobre sí mismo).
+async function coachFromToken(accessToken) {
+  const result = await userFromToken(accessToken);
+  if (result.profile.role !== "coach") { const e = new Error("Solo los coaches gestionan suscripción"); e.status = 403; throw e; }
+  return result;
 }
 
 // Lee el body JSON de una request de Vercel (Node).
@@ -61,4 +67,4 @@ function siteUrl(req) {
   return `${proto}://${host}`;
 }
 
-module.exports = { stripe, admin, coachFromToken, readJson, readRaw, siteUrl, PLAN_BY_PRICE, PRICE_BY_PLAN };
+module.exports = { stripe, admin, userFromToken, coachFromToken, readJson, readRaw, siteUrl, PLAN_BY_PRICE, PRICE_BY_PLAN };

@@ -151,6 +151,17 @@
   "use strict";
   const $ = (s) => document.querySelector(s);
 
+  // Aviso de un solo uso: si getSessionProfile() detectó una sesión de una
+  // cuenta ya eliminada, lo marcó aquí antes de cerrar sesión (ver auth.js).
+  if (sessionStorage.getItem("msf_account_deleted")) {
+    sessionStorage.removeItem("msf_account_deleted");
+    const el = $("#loginError");
+    if (el) {
+      el.textContent = "Esta cuenta ya no existe o fue eliminada. Si deseas utilizar MySystemFit nuevamente, crea una cuenta nueva.";
+      el.style.display = "block";
+    }
+  }
+
   // Traducción de los errores más comunes de Supabase Auth.
   function authMsg(ex) {
     const m = ex?.message || "";

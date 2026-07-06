@@ -736,7 +736,10 @@
       await window.msfSupabase.from("profiles").update({
         full_name: $("#profName").value.trim(),
         phone: $("#profPhone").value.trim(),
-        years_experience: $("#profYears").value ? parseInt($("#profYears").value, 10) : null,
+        location: $("#profLocation").value.trim(),
+        years_experience: $("#profYears").value || null,
+        current_students_count: $("#profStudentCount").value ? parseInt($("#profStudentCount").value, 10) : null,
+        business_goal: $("#profBusinessGoal").value || null,
         specialty: $("#profSpecialty").value.trim(),
         bio: $("#profBio").value.trim(),
       }).eq("id", PROFILE.id);
@@ -745,12 +748,21 @@
   });
 
   $("#btnLogout")?.addEventListener("click", () => window.msfAuth.signOut());
-  $("#btnConfirmDelete")?.addEventListener("click", async () => {
+  $("#btnConfirmDelete")?.addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
     try {
+      const { data: { session } } = await window.msfSupabase.auth.getSession();
+      const r = await fetch("/api/delete-account", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ access_token: session?.access_token }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || "No se pudo eliminar la cuenta");
       await window.msfSupabase.auth.signOut();
-      toast("Sesión cerrada", "Contacta a soporte para eliminar tu cuenta definitivamente", "info");
+      sessionStorage.setItem("msf_account_deleted", "1");
       window.location.href = "login.html";
-    } catch (ex) { errToast(ex, "No se pudo cerrar la cuenta"); }
+    } catch (ex) { btn.disabled = false; errToast(ex, "No se pudo eliminar la cuenta"); }
   });
 
   /* ---------- Tilt 3D + glare en cards ----------
@@ -1388,8 +1400,8 @@
     if (bStar && bPlus) {
       bStar.disabled = active && plan === "Star";
       bPlus.disabled = active && plan === "Star Plus";
-      bStar.textContent = plan === "Star" && active ? "Star · plan actual" : `Star · ${PLAN_PRICE.Star}/mes`;
-      bPlus.textContent = plan === "Star Plus" && active ? "Star Plus · plan actual" : `Star Plus · ${PLAN_PRICE["Star Plus"]}/mes`;
+      bStar.textContent = plan === "Star" && active ? "Star · plan actual" : `Star · ${api.planPrice("Star")}/mes`;
+      bPlus.textContent = plan === "Star Plus" && active ? "Star Plus · plan actual" : `Star Plus · ${api.planPrice("Star Plus")}/mes`;
     }
     if (manage) manage.classList.toggle("hidden", !PROFILE.stripe_customer_id);
     if (hint) {
@@ -1397,7 +1409,73 @@
         ? (PROFILE.current_period_end ? `Se renueva el ${new Date(PROFILE.current_period_end).toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: "numeric" })}` : "")
         : "Estás en el plan Free. Elige un plan para desbloquear más alumnos y funciones premium.";
     }
+    // Regalo activo (mes de prueba Star Plus ganado con puntos de referidos).
+    const giftRow = $("#giftStatusRow"), giftCountdown = $("#giftCountdown"), confirmBtn = $("#btnConfirmTrialUpgrade");
+    if (PROFILE.gift_plan) {
+      giftRow?.classList.remove("hidden");
+      const days = Math.ceil((new Date(PROFILE.gift_ends_at) - new Date()) / 86400000);
+      giftCountdown?.classList.remove("hidden");
+      giftCountdown && (giftCountdown.textContent = days > 0
+        ? `Vuelve a ${PROFILE.pre_gift_plan || "Star"} en ${days} día${days === 1 ? "" : "s"} (${new Date(PROFILE.gift_ends_at).toLocaleDateString("es-MX")}) si no confirmas el pago.`
+        : `Vuelve a ${PROFILE.pre_gift_plan || "Star"} hoy si no confirmas el pago.`);
+      confirmBtn?.classList.remove("hidden");
+    } else {
+      giftRow?.classList.add("hidden");
+      giftCountdown?.classList.add("hidden");
+      confirmBtn?.classList.add("hidden");
+    }
+    // Cancelar membresía / reactivar.
+    const cancelBtn = $("#btnCancelMembership"), cancelHint = $("#cancelHint");
+    cancelBtn?.classList.toggle("hidden", !active || !PROFILE.stripe_subscription_id);
+    if (PROFILE.cancel_at_period_end) {
+      cancelBtn && (cancelBtn.textContent = "Reactivar membresía");
+      cancelHint && (cancelHint.textContent = PROFILE.current_period_end
+        ? `Tu membresía termina el ${new Date(PROFILE.current_period_end).toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: "numeric" })}. No se te cobrará de nuevo.`
+        : "Tu membresía se cancelará al final del periodo actual.");
+    } else {
+      cancelBtn && (cancelBtn.textContent = "Cancelar membresía");
+      cancelHint && (cancelHint.textContent = "Tu membresía seguirá activa hasta el final del periodo actual; después no se te cobrará de nuevo.");
+    }
   }
+  $("#btnConfirmTrialUpgrade")?.addEventListener("click", async () => {
+    const btn = $("#btnConfirmTrialUpgrade");
+    btn.disabled = true;
+    try {
+      const { data: { session } } = await window.msfSupabase.auth.getSession();
+      if (!session) return toast("Sesión expirada, vuelve a entrar", "", "err");
+      const r = await fetch("/api/confirm-trial-upgrade", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ access_token: session.access_token }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || "No se pudo confirmar el cambio de plan");
+      window.msfSound?.playSound?.("confirm");
+      toast("¡Listo! Star Plus es ahora tu plan de verdad.", "", "ok");
+      const fresh = await window.msfAuth.getSessionProfile();
+      if (fresh?.profile) { PROFILE = fresh.profile; applyPlanGating(); }
+    } catch (ex) { errToast(ex, "No se pudo confirmar el cambio de plan"); }
+    finally { btn.disabled = false; }
+  });
+  $("#btnCancelMembership")?.addEventListener("click", async () => {
+    const btn = $("#btnCancelMembership");
+    const cancelling = !PROFILE.cancel_at_period_end;
+    if (cancelling && !confirm("¿Seguro que quieres cancelar tu membresía? Seguirá activa hasta el final del periodo actual.")) return;
+    btn.disabled = true;
+    try {
+      const { data: { session } } = await window.msfSupabase.auth.getSession();
+      if (!session) return toast("Sesión expirada, vuelve a entrar", "", "err");
+      const r = await fetch("/api/cancel-subscription", {
+        method: cancelling ? "POST" : "DELETE", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ access_token: session.access_token }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || "No se pudo actualizar la cancelación");
+      toast(cancelling ? "Membresía programada para cancelarse" : "Cancelación deshecha", "", "ok");
+      const fresh = await window.msfAuth.getSessionProfile();
+      if (fresh?.profile) { PROFILE = fresh.profile; applyPlanGating(); }
+    } catch (ex) { errToast(ex, "No se pudo actualizar la cancelación"); }
+    finally { btn.disabled = false; }
+  });
 
   // Pago embebido: flujo compartido con select-plan.html (assets/js/checkout-shared.js).
   const startCheckout = (plan) => window.msfCheckout.startCheckout(plan);
@@ -1469,6 +1547,7 @@
             <span class="t3 text-sm">${new Date(r.created_at).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}</span>
           </div>`).join("");
       }
+      renderReferralProgress();
     } catch (ex) { errToast(ex, "No se pudieron cargar los referidos"); }
   }
   $("#btnCopyRefCode")?.addEventListener("click", async () => {
@@ -1476,6 +1555,55 @@
     if (!code || code === "—") return;
     try { await navigator.clipboard.writeText(code); toast("Código copiado", code, "ok"); }
     catch { toast(code, "Cópialo manualmente", "info"); }
+  });
+
+  /* ---------- Progreso de puntos de referidos ----------
+     Las recompensas dependen del plan ACTUAL del coach: Star tiene dos metas
+     (4 pts → mes gratis de Star, manual; 5 pts → upgrade a Star Plus,
+     automático); Star Plus tiene una sola meta (4 pts, automático). */
+  function renderReferralProgress() {
+    const plan = PROFILE.plan || "Free";
+    const pts = PROFILE.referral_points || 0;
+    const isStar = plan === "Star", isPlus = plan === "Star Plus";
+    $("#refProgressStar")?.classList.toggle("hidden", !isStar);
+    $("#refProgressPlus")?.classList.toggle("hidden", !isPlus);
+    $("#refMotivFree") && ($("#refMotivFree").style.display = !isStar && !isPlus ? "" : "none");
+    if (isStar) {
+      $("#refPtsTo4") && ($("#refPtsTo4").textContent = `${Math.min(pts, 4)}/4`);
+      $("#refBar4") && ($("#refBar4").style.width = Math.min(100, (pts / 4) * 100) + "%");
+      $("#refPtsTo5") && ($("#refPtsTo5").textContent = `${Math.min(pts, 5)}/5`);
+      $("#refBar5") && ($("#refBar5").style.width = Math.min(100, (pts / 5) * 100) + "%");
+      $("#btnRedeemStarMonth")?.classList.toggle("hidden", pts < 4);
+      $("#refMotivStar") && ($("#refMotivStar").textContent = pts >= 4
+        ? "¡Ya puedes canjear tu mes gratis de Star, o sigue sumando: a los 5 puntos subes gratis a Star Plus por un mes!"
+        : `Te faltan ${4 - pts} punto${4 - pts === 1 ? "" : "s"} para tu primer mes gratis de Star.`);
+    } else if (isPlus) {
+      const rem = pts % 4;
+      $("#refPtsPlus") && ($("#refPtsPlus").textContent = `${rem}/4`);
+      $("#refBarPlus") && ($("#refBarPlus").style.width = Math.min(100, (rem / 4) * 100) + "%");
+      $("#refMotivPlus") && ($("#refMotivPlus").textContent = `Te faltan ${4 - rem} punto${4 - rem === 1 ? "" : "s"} para tu próximo mes gratis de Star Plus (automático).`);
+    } else if (pts > 0) {
+      $("#refMotivFree") && ($("#refMotivFree").textContent = `Ya tienes ${pts} punto${pts === 1 ? "" : "s"} de referidos. Mejora a Star o Star Plus para empezar a canjearlos por meses gratis.`);
+    }
+  }
+  $("#btnRedeemStarMonth")?.addEventListener("click", async () => {
+    const btn = $("#btnRedeemStarMonth");
+    btn.disabled = true;
+    try {
+      const { data: { session } } = await window.msfSupabase.auth.getSession();
+      if (!session) return toast("Sesión expirada, vuelve a entrar", "", "err");
+      const r = await fetch("/api/redeem-referral", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ access_token: session.access_token }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || "No se pudo canjear la recompensa");
+      window.msfSound?.playSound?.("confirm");
+      toast("¡Listo! Tu próximo mes de Star es gratis 🎉", "", "ok");
+      const fresh = await window.msfAuth.getSessionProfile();
+      if (fresh?.profile) { PROFILE = fresh.profile; renderReferralProgress(); applyPlanGating(); }
+    } catch (ex) { errToast(ex, "No se pudo canjear la recompensa"); }
+    finally { btn.disabled = false; }
   });
 
   /* ---------- Asistencia Programada (lista del ciclo actual) ----------
@@ -1729,7 +1857,10 @@
     $("#profName") && ($("#profName").value = PROFILE.full_name);
     $("#profEmail") && ($("#profEmail").value = PROFILE.email);
     $("#profPhone") && ($("#profPhone").value = PROFILE.phone || "");
-    $("#profYears") && ($("#profYears").value = PROFILE.years_experience ?? "");
+    $("#profLocation") && ($("#profLocation").value = PROFILE.location || "");
+    $("#profYears") && ($("#profYears").value = PROFILE.years_experience || "");
+    $("#profStudentCount") && ($("#profStudentCount").value = PROFILE.current_students_count ?? "");
+    $("#profBusinessGoal") && ($("#profBusinessGoal").value = PROFILE.business_goal || "");
     $("#profSpecialty") && ($("#profSpecialty").value = PROFILE.specialty || "");
     $("#profBio") && ($("#profBio").value = PROFILE.bio || "");
     // Enlace de invitación permanente del coach (login?coach=<id>)

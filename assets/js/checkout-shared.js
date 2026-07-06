@@ -105,5 +105,29 @@ window.msfCheckout = (function () {
     callbacks.onTimeout?.();
   }
 
-  return { loadStripeJs, destroyEmbeddedCheckout, startCheckout, handleCheckoutReturn, toast, errToast };
+  // Recomendación de plan a partir de las respuestas del onboarding — misma
+  // función usada en la pantalla de recomendación (onboarding.html) y para
+  // resaltar la tarjeta correspondiente en select-plan.html.
+  const AUTOMATION_GOALS = ["Automatizar mi negocio"];
+  const STAR_GOALS = ["Dar seguimiento profesional", "Organizar mejor mis alumnos", "Conseguir más clientes"];
+  function recommendPlan({ students, goal }) {
+    const n = students || 0;
+    if (n >= 15 || AUTOMATION_GOALS.includes(goal)) return "Star Plus";
+    if (n >= 5 || STAR_GOALS.includes(goal)) return "Star";
+    return "Free";
+  }
+  function recommendationText(plan, { students, goal }) {
+    const n = students || 0;
+    const alumnosTxt = n > 0 ? `trabajas con ${n} alumno${n === 1 ? "" : "s"}` : "estás comenzando";
+    const goalTxt = goal ? `tu objetivo principal es "${goal.toLowerCase()}"` : "quieres hacer crecer tu negocio";
+    if (plan === "Star Plus") {
+      return `Te recomendamos el Plan Star Plus porque ${alumnosTxt} y ${goalTxt}: este plan incluye automatización, estadísticas avanzadas y todas las herramientas para escalar sin límites.`;
+    }
+    if (plan === "Star") {
+      return `Te recomendamos el Plan Star porque ${alumnosTxt} y ${goalTxt}: incluye gestión de rutinas, objetivos y pagos para ayudarte a crecer sin pagar por funciones que aún no necesitas.`;
+    }
+    return `Te recomendamos el Plan Gratuito porque ${alumnosTxt}: es ideal para conocer la plataforma sin costo. Podrás actualizar de plan cuando lo necesites.`;
+  }
+
+  return { loadStripeJs, destroyEmbeddedCheckout, startCheckout, handleCheckoutReturn, toast, errToast, recommendPlan, recommendationText };
 })();
