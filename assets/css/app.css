@@ -826,6 +826,7 @@ ul { list-style: none; }
 @media (max-width: 820px) {
   .sidebar { position: fixed; left: 0; transform: translateX(-100%); transition: transform var(--dur-slow) var(--ease); }
   .sidebar.is-open { transform: translateX(0); }
+  .sidebar__close { display: grid !important; position: absolute; top: var(--s-4); right: var(--s-4); }
   .content { padding: var(--s-4); }
   .topbar { padding: 0 var(--s-4); }
   .search { display: none; }
@@ -836,8 +837,13 @@ ul { list-style: none; }
   .messages-thread__body { min-height: 320px; }
   .drawer { width: 100%; }
   .grid-cards { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+  /* Alumnos: la tabla tiene min-width:640px y no cabe en móvil/tablet;
+     la vista de tarjetas ya es responsive, así que se fuerza aquí. */
+  #studentsTable, #viewToggle { display: none !important; }
+  #studentsCards { display: grid !important; }
 }
 .menu-toggle { display: none; }
+.sidebar__close { display: none; }
 
 @media (max-width: 560px) {
   .content { padding: var(--s-3); }

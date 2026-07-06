@@ -301,7 +301,7 @@
       const profile = await completeOAuthProfile(result.profile);
       // Alumno sin coach vinculado: obligar a escribir el código antes de entrar.
       if (profile.role === "alumno" && !profile.coach_id) { showCoachGate(); return; }
-      window.location.href = profile.role === "coach" ? "index.html" : "alumno.html";
+      window.location.href = profile.role === "coach" ? window.msfAuth.coachLandingPage(profile) : "alumno.html";
     }
   })();
 
@@ -336,7 +336,7 @@
     try {
       await window.msfAuth.updatePassword($("#resetPassword").value);
       const result = await window.msfAuth.getSessionProfile();
-      window.location.href = result?.profile.role === "coach" ? "index.html" : "alumno.html";
+      window.location.href = result?.profile.role === "coach" ? window.msfAuth.coachLandingPage(result.profile) : "alumno.html";
     } catch (ex) {
       err.style.color = "var(--coral)";
       err.textContent = authMsg(ex);
@@ -400,7 +400,7 @@
     try {
       await window.msfAuth.signIn($("#loginEmail").value.trim(), $("#loginPassword").value);
       const result = await window.msfAuth.getSessionProfile();
-      window.location.href = result.profile.role === "coach" ? "index.html" : "alumno.html";
+      window.location.href = result.profile.role === "coach" ? window.msfAuth.coachLandingPage(result.profile) : "alumno.html";
     } catch (ex) {
       err.textContent = authMsg(ex);
       err.style.display = "block";
@@ -430,7 +430,7 @@
         localStorage.removeItem(PENDING_COACH_KEY);
       }
       const result = await window.msfAuth.getSessionProfile();
-      if (result) { window.location.href = result.profile.role === "coach" ? "index.html" : "alumno.html"; return; }
+      if (result) { window.location.href = result.profile.role === "coach" ? window.msfAuth.coachLandingPage(result.profile) : "alumno.html"; return; }
       err.style.display = "block";
       err.style.color = "var(--lime)";
       err.textContent = "Cuenta creada. Revisa tu correo para confirmar y luego inicia sesión.";

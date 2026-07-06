@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MySystemFit — Completa tu perfil</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/css/tokens.css" />
+<link rel="stylesheet" href="assets/css/app.css" />
+<script src="assets/js/theme.js"></script>
+<style>
+  .ob-overlay{position:fixed;inset:0;z-index:200;background:var(--bg-0,#0a0a0f);display:flex;flex-direction:column;overflow-y:auto}
+  .ob-inner{width:100%;max-width:520px;margin:auto;padding:28px 22px 40px}
+  .ob-progress{height:6px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;margin-bottom:6px}
+  .ob-progress__bar{height:100%;background:linear-gradient(90deg,var(--indigo-hi,#7c8cff),var(--lime,#b6f36b));border-radius:99px;transition:width .35s ease;width:20%}
+  .ob-step-count{font-size:12px;color:var(--text-3);margin-bottom:26px;text-align:right}
+  .ob-step{display:none;animation:obIn .35s ease}
+  .ob-step.active{display:block}
+  @keyframes obIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .ob-q{font-family:var(--font-display);font-size:23px;font-weight:700;letter-spacing:-.03em;margin-bottom:4px}
+  .ob-hint{font-size:13px;color:var(--text-2);margin-bottom:22px}
+  .ob-choices{display:grid;gap:10px}
+  .ob-choice{display:flex;align-items:center;gap:12px;padding:15px 16px;border:1.5px solid var(--border,#26262e);border-radius:14px;cursor:pointer;transition:.15s;background:var(--bg-1,#13131a)}
+  .ob-choice:hover{border-color:var(--indigo-hi,#7c8cff)}
+  .ob-choice.sel{border-color:var(--indigo-hi,#7c8cff);background:rgba(124,140,255,.12)}
+  .ob-choice__emoji{font-size:22px}
+  .ob-choice__t{font-weight:600}
+  .ob-choice__s{font-size:12px;color:var(--text-3)}
+  .ob-nav{display:flex;gap:10px;margin-top:28px}
+  .ob-nav .btn{flex:1}
+  .ob-err{color:var(--coral,#ff6b6b);font-size:13px;margin-top:12px;display:none}
+</style>
+</head>
+<body>
+<div class="aurora-deep"></div>
+<div id="onboarding" class="ob-overlay">
+  <div class="ob-inner">
+    <div class="brand" style="justify-content:center;margin-bottom:20px">
+      <div class="brand__logo"><svg viewBox="0 0 24 24" width="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5 17.5 17.5M4 12l4-4M16 16l4-4M8 4l12 12M4 8l12 12"/></svg></div>
+      <div class="brand__name">MySystem<span class="text-gradient">Fit</span></div>
+    </div>
+    <div class="ob-progress"><div class="ob-progress__bar" id="obBar"></div></div>
+    <div class="ob-step-count"><span id="obStepNum">1</span> / <span id="obTotal">5</span></div>
+
+    <!-- 1. Nombre completo -->
+    <div class="ob-step active" data-step="1">
+      <div class="ob-q">Confirma tu nombre completo</div>
+      <div class="ob-hint">Así te verán tus alumnos dentro de la plataforma.</div>
+      <div class="field"><label for="obFullName">Nombre completo *</label><input class="input" type="text" id="obFullName" maxlength="80" placeholder="Ej. Ana Martínez"></div>
+    </div>
+
+    <!-- 2. Celular -->
+    <div class="ob-step" data-step="2">
+      <div class="ob-q">¿Cuál es tu número de celular?</div>
+      <div class="ob-hint">Solo tú lo verás, en tu perfil de Ajustes.</div>
+      <div class="field"><label for="obPhone">Celular *</label><input class="input" type="tel" id="obPhone" inputmode="tel" placeholder="Ej. 55 1234 5678"></div>
+    </div>
+
+    <!-- 3. Años de experiencia -->
+    <div class="ob-step" data-step="3">
+      <div class="ob-q">¿Cuántos años de experiencia tienes como coach?</div>
+      <div class="ob-hint">Un número aproximado está bien.</div>
+      <div class="field"><label for="obYears">Años de experiencia *</label><input class="input" type="number" min="0" max="60" step="1" id="obYears" inputmode="numeric" placeholder="Ej. 3"></div>
+    </div>
+
+    <!-- 4. Especialidad -->
+    <div class="ob-step" data-step="4">
+      <div class="ob-q">¿Cuál es tu especialidad principal?</div>
+      <div class="ob-hint">Ayuda a tus alumnos a saber en qué eres experto.</div>
+      <div class="ob-choices" data-field="specialty" data-single id="obSpecialtyChoices">
+        <div class="ob-choice" data-value="Fitness general"><span class="ob-choice__emoji">🏋️</span><div><div class="ob-choice__t">Fitness general</div></div></div>
+        <div class="ob-choice" data-value="Hipertrofia"><span class="ob-choice__emoji">💪</span><div><div class="ob-choice__t">Hipertrofia</div></div></div>
+        <div class="ob-choice" data-value="Pérdida de grasa"><span class="ob-choice__emoji">🔥</span><div><div class="ob-choice__t">Pérdida de grasa</div></div></div>
+        <div class="ob-choice" data-value="Nutrición"><span class="ob-choice__emoji">🥗</span><div><div class="ob-choice__t">Nutrición</div></div></div>
+        <div class="ob-choice" data-value="Otro"><span class="ob-choice__emoji">✨</span><div><div class="ob-choice__t">Otro</div></div></div>
+      </div>
+      <div id="obSpecialtyFreeWrap" class="hidden mt-4">
+        <div class="field"><label for="obSpecialtyText">¿Cuál?</label><input class="input" type="text" id="obSpecialtyText" maxlength="60" placeholder="Ej. Movilidad y rehabilitación"></div>
+      </div>
+    </div>
+
+    <!-- 5. Bio -->
+    <div class="ob-step" data-step="5">
+      <div class="ob-q">Cuéntanos brevemente sobre ti</div>
+      <div class="ob-hint">Tus alumnos podrán ver esta descripción de tu perfil.</div>
+      <div class="field"><textarea class="input" id="obBio" style="min-height:110px;resize:vertical" maxlength="400" placeholder="Ej. Entrenador certificado especializado en fuerza funcional…"></textarea></div>
+    </div>
+
+    <div class="ob-err" id="obError"></div>
+    <div class="ob-nav">
+      <button class="btn btn--ghost" id="obBack" style="display:none">Atrás</button>
+      <button class="btn btn--primary" id="obNext">Siguiente</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/supabaseClient.js"></script>
+<script src="assets/js/auth.js"></script>
+<script src="assets/js/api.js"></script>
+<script src="assets/js/sound.js"></script>
+<script>
+(async () => {
+  const $ = (s) => document.querySelector(s);
+  const auth = await window.msfAuth.requireRole("coach");
+  if (!auth) return;
+  const profile = auth.profile;
+  if (profile.onboarding_completed) {
+    window.location.href = profile.plan_selected ? "index.html" : "select-plan.html";
+    return;
+  }
+
+  $("#obFullName").value = profile.full_name || "";
+  $("#obPhone").value = profile.phone || "";
+
+  const answers = {};
+  let step = 1;
+  const TOTAL = 5;
+  const overlay = $("#onboarding");
+  const stepEl = (n) => overlay.querySelector(`.ob-step[data-step="${n}"]`);
+  const bar = $("#obBar"), stepNum = $("#obStepNum"),
+        backBtn = $("#obBack"), nextBtn = $("#obNext"), errEl = $("#obError");
+
+  overlay.querySelectorAll("[data-single]").forEach((group) => {
+    const field = group.getAttribute("data-field");
+    group.addEventListener("click", (e) => {
+      const opt = e.target.closest("[data-value]");
+      if (!opt || !group.contains(opt)) return;
+      group.querySelectorAll("[data-value]").forEach((o) => o.classList.remove("sel"));
+      opt.classList.add("sel");
+      answers[field] = opt.getAttribute("data-value");
+      $("#obSpecialtyFreeWrap").classList.toggle("hidden", answers[field] !== "Otro");
+      errEl.style.display = "none";
+    });
+  });
+
+  function render() {
+    overlay.querySelectorAll(".ob-step").forEach((s) => s.classList.remove("active"));
+    stepEl(step).classList.add("active");
+    bar.style.width = Math.round((step / TOTAL) * 100) + "%";
+    stepNum.textContent = step;
+    backBtn.style.display = step === 1 ? "none" : "";
+    nextBtn.textContent = step === TOTAL ? "Terminar 🚀" : "Siguiente";
+    errEl.style.display = "none";
+  }
+  function fail(msg) { errEl.textContent = msg; errEl.style.display = "block"; return false; }
+  function specialtyValue() {
+    return answers.specialty === "Otro" ? $("#obSpecialtyText").value.trim() : (answers.specialty || "");
+  }
+  function validate() {
+    if (step === 1 && !$("#obFullName").value.trim()) return fail("Escribe tu nombre completo.");
+    if (step === 2 && !$("#obPhone").value.trim()) return fail("Escribe tu número de celular.");
+    if (step === 3) {
+      const v = parseInt($("#obYears").value, 10);
+      if (!(v >= 0 && v <= 60)) return fail("Escribe tus años de experiencia (0-60).");
+    }
+    if (step === 4 && !specialtyValue()) return fail("Elige tu especialidad.");
+    // paso 5 (bio) es opcional
+    return true;
+  }
+  async function finish() {
+    nextBtn.disabled = true; nextBtn.textContent = "Guardando…";
+    try {
+      const { error } = await window.msfSupabase.rpc("save_coach_onboarding", {
+        p_full_name: $("#obFullName").value.trim(),
+        p_phone: $("#obPhone").value.trim(),
+        p_years_experience: parseInt($("#obYears").value, 10),
+        p_specialty: specialtyValue(),
+        p_bio: $("#obBio").value.trim(),
+      });
+      if (error) throw error;
+      window.msfSound?.playSound?.("save");
+      window.location.href = profile.plan_selected ? "index.html" : "select-plan.html";
+    } catch (ex) {
+      nextBtn.disabled = false; nextBtn.textContent = "Terminar 🚀";
+      fail(ex.message || "No se pudo guardar. Inténtalo de nuevo.");
+    }
+  }
+
+  nextBtn.addEventListener("click", () => {
+    window.msfSound?.playSound?.("click");
+    if (!validate()) return;
+    if (step === TOTAL) { finish(); return; }
+    step++; render();
+  });
+  backBtn.addEventListener("click", () => {
+    window.msfSound?.playSound?.("click");
+    if (step > 1) { step--; render(); }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

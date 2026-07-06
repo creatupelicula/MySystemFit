@@ -40,8 +40,10 @@ window.msfApi = (function () {
     "Star Plus": { messages: true,  objectives: true,  photos: true,  community: true,  routines: true },
     "Kings":     { messages: true,  objectives: true,  photos: true,  community: true,  routines: true },
   };
+  const PLAN_PRICES = { "Free": "$0", "Star": "$500 MXN", "Star Plus": "$1,000 MXN" };
   function planLimit(plan) { return PLAN_LIMITS[plan] ?? PLAN_LIMITS["Free"]; }
   function planFeatures(plan) { return PLAN_FEATURES[plan] ?? PLAN_FEATURES["Free"]; }
+  function planPrice(plan) { return PLAN_PRICES[plan] ?? ""; }
   // Único punto de consulta de una capacidad puntual: api.can("messages", plan).
   function can(feature, plan) { return !!planFeatures(plan)[feature]; }
   // Plan efectivo del usuario actual: el suyo si es coach, el de su coach si es alumno.
@@ -528,7 +530,7 @@ window.msfApi = (function () {
 
   return {
     initials, esc, friendlyError,
-    planLimit, planFeatures, can, myCoachPlan, countStudents,
+    planLimit, planFeatures, planPrice, can, myCoachPlan, countStudents,
     getReferralInfo,
     saveDailySurvey, cancelAttendance, myAttendance, listCoachAttendance, resetAttendanceDay, listMyAttendance,
     saveOnboarding,

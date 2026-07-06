@@ -116,6 +116,14 @@
   });
 
   $("#menuToggle")?.addEventListener("click", () => { window.msfSound?.playSound?.("click"); $("#sidebar").classList.toggle("is-open"); });
+  $("#sidebarClose")?.addEventListener("click", () => { window.msfSound?.playSound?.("click"); $("#sidebar").classList.remove("is-open"); });
+  // Cierra el menú al tocar fuera de él (fuera del sidebar y del botón que lo abre).
+  document.addEventListener("click", (e) => {
+    const sidebar = $("#sidebar");
+    if (!sidebar?.classList.contains("is-open")) return;
+    if (sidebar.contains(e.target) || e.target.closest("#menuToggle")) return;
+    sidebar.classList.remove("is-open");
+  });
 
   function toggleTheme() {
     const mode = window.msfTheme.toggleMode();
@@ -727,7 +735,10 @@
     try {
       await window.msfSupabase.from("profiles").update({
         full_name: $("#profName").value.trim(),
+        phone: $("#profPhone").value.trim(),
+        years_experience: $("#profYears").value ? parseInt($("#profYears").value, 10) : null,
         specialty: $("#profSpecialty").value.trim(),
+        bio: $("#profBio").value.trim(),
       }).eq("id", PROFILE.id);
       toast("Cambios guardados", "Todo quedó actualizado", "ok");
     } catch (ex) { errToast(ex, "No se pudo guardar el perfil"); }
@@ -1388,57 +1399,8 @@
     }
   }
 
-  /* Pago embebido: todo el flujo ocurre dentro de la app (modal premium).
-     Si el servidor aún no tiene clave publicable, cae al checkout alojado. */
-  let EMBEDDED_CHECKOUT = null;
-  function destroyEmbeddedCheckout() {
-    if (EMBEDDED_CHECKOUT) { try { EMBEDDED_CHECKOUT.destroy(); } catch (_) {} EMBEDDED_CHECKOUT = null; }
-  }
-  function loadStripeJs() {
-    if (window.Stripe) return Promise.resolve();
-    return new Promise((resolve, reject) => {
-      const s = document.createElement("script");
-      s.src = "https://js.stripe.com/v3/";
-      s.onload = resolve;
-      s.onerror = () => reject(new Error("No se pudo cargar el módulo de pago"));
-      document.head.appendChild(s);
-    });
-  }
-  const PLAN_PRICE = { Star: "$500 MXN", "Star Plus": "$1,000 MXN" };
-  async function startCheckout(plan) {
-    try {
-      const { data: { session } } = await window.msfSupabase.auth.getSession();
-      if (!session) return toast("Sesión expirada, vuelve a entrar", "", "err");
-      $("#checkoutPlanName") && ($("#checkoutPlanName").textContent = plan);
-      $("#checkoutPlanPrice") && ($("#checkoutPlanPrice").textContent = PLAN_PRICE[plan] || "");
-      toast("Preparando pago seguro…", "", "info");
-      const r = await fetch("/api/checkout", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ access_token: session.access_token, plan }),
-      });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error || "No se pudo iniciar el pago");
-      if (data.client_secret && data.publishable_key) {
-        await loadStripeJs();
-        destroyEmbeddedCheckout();
-        const stripeClient = window.Stripe(data.publishable_key);
-        EMBEDDED_CHECKOUT = await stripeClient.initEmbeddedCheckout({ clientSecret: data.client_secret });
-        $("#checkoutMount").innerHTML = "";
-        EMBEDDED_CHECKOUT.mount("#checkoutMount");
-        $("#modal-checkout").classList.add("is-open");
-        return;
-      }
-      if (data.url) { window.location.href = data.url; return; }
-      throw new Error("No se pudo iniciar el pago");
-    } catch (ex) { errToast(ex, "No se pudo iniciar el pago"); }
-  }
-  // Al cerrar el modal de pago (o cualquier modal), limpia el checkout embebido.
-  document.addEventListener("click", (e) => {
-    if ((e.target.classList.contains("modal-overlay") || e.target.closest(".js-modal-close")) &&
-        $("#modal-checkout")?.classList.contains("is-open") === false) {
-      destroyEmbeddedCheckout();
-    }
-  });
+  // Pago embebido: flujo compartido con select-plan.html (assets/js/checkout-shared.js).
+  const startCheckout = (plan) => window.msfCheckout.startCheckout(plan);
   async function openPortal() {
     try {
       const { data: { session } } = await window.msfSupabase.auth.getSession();
@@ -1486,24 +1448,10 @@
   }
 
   /* Al volver de Stripe: refresca el perfil (el webhook ya sincronizó el plan). */
-  async function handleCheckoutReturn() {
-    const params = new URLSearchParams(location.search);
-    const state = params.get("checkout");
-    if (!state) return;
-    history.replaceState({}, "", location.pathname);
-    if (state === "cancel") { toast("Pago cancelado", "", "info"); return; }
-    toast("Confirmando tu suscripción…", "", "info");
-    // El webhook puede tardar un par de segundos; reintenta leyendo el perfil.
-    for (let i = 0; i < 6; i++) {
-      await new Promise((r) => setTimeout(r, 1500));
-      const fresh = await window.msfAuth.getSessionProfile();
-      if (fresh?.profile) {
-        PROFILE = fresh.profile;
-        applyPlanGating();
-        if (PROFILE.subscription_status === "active") { toast("¡Suscripción activa! 🎉", `Plan ${PROFILE.plan}`, "ok"); window.msfSound?.playSound?.("payment"); return; }
-      }
-    }
-    toast("Pago recibido. Si el plan no cambió, recarga en un momento.", "", "info");
+  function handleCheckoutReturn() {
+    return window.msfCheckout.handleCheckoutReturn({
+      onSynced(profile) { PROFILE = profile; applyPlanGating(); },
+    });
   }
 
   /* ---------- Referidos ---------- */
@@ -1772,7 +1720,7 @@
   }
 
   async function init() {
-    const auth = await window.msfAuth.requireRole("coach");
+    const auth = await window.msfAuth.requireCoachReady();
     if (!auth) return;
     PROFILE = auth.profile;
     $("#pageSub") && ($("#pageSub").textContent = `Buenas, ${PROFILE.full_name.split(" ")[0]} 👋`);
@@ -1780,7 +1728,10 @@
     $$(".avatar.avatar--ring, .coach-card .avatar").forEach((el) => (el.textContent = api.initials(PROFILE.full_name)));
     $("#profName") && ($("#profName").value = PROFILE.full_name);
     $("#profEmail") && ($("#profEmail").value = PROFILE.email);
+    $("#profPhone") && ($("#profPhone").value = PROFILE.phone || "");
+    $("#profYears") && ($("#profYears").value = PROFILE.years_experience ?? "");
     $("#profSpecialty") && ($("#profSpecialty").value = PROFILE.specialty || "");
+    $("#profBio") && ($("#profBio").value = PROFILE.bio || "");
     // Enlace de invitación permanente del coach (login?coach=<id>)
     const inviteUrl = `${location.origin}/login?coach=${PROFILE.id}`;
     $("#inviteLinkDisplay") && ($("#inviteLinkDisplay").textContent = inviteUrl);

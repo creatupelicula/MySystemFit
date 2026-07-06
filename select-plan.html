@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MySystemFit — Elige tu plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/css/tokens.css" />
+<link rel="stylesheet" href="assets/css/app.css" />
+<script src="assets/js/theme.js"></script>
+<style>
+  .sp-wrap { min-height: 100vh; padding: 48px 24px; }
+  .sp-head { text-align: center; max-width: 640px; margin: 0 auto 36px; }
+  .sp-head h1 { font-family: var(--font-display); font-size: 30px; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 8px; }
+  .sp-head p { color: var(--text-2); font-size: 14px; }
+  .sp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 1080px; margin: 0 auto; }
+  @media (max-width: 860px) { .sp-grid { grid-template-columns: 1fr; max-width: 480px; } }
+  .sp-card {
+    position: relative; display: flex; flex-direction: column; padding: 28px 24px;
+    border-radius: var(--r-lg); border: 1px solid var(--border); background: var(--surface);
+    transition: transform var(--dur) var(--ease), border-color var(--dur), box-shadow var(--dur);
+  }
+  .sp-card:hover { transform: translateY(-4px); border-color: var(--border-strong); box-shadow: var(--shadow-lg); }
+  .sp-card--featured { border-color: var(--indigo-hi); box-shadow: var(--shadow-lg), 0 0 60px -25px var(--indigo-glow); }
+  .sp-badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: linear-gradient(90deg, var(--indigo-hi), var(--lime)); color: #0a0a0f; font-size: 11px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; padding: 4px 14px; border-radius: 999px; white-space: nowrap; }
+  .sp-name { font-family: var(--font-display); font-size: 20px; font-weight: 700; }
+  .sp-price { display: flex; align-items: baseline; gap: 4px; margin: 10px 0 4px; }
+  .sp-price__amount { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; }
+  .sp-price__period { font-size: 13px; color: var(--text-3); }
+  .sp-limit { font-size: 13px; color: var(--text-2); margin-bottom: 20px; }
+  .sp-benefits { list-style: none; margin: 0 0 24px; padding: 0; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+  .sp-benefits li { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+  .sp-benefits li svg { flex-shrink: 0; width: 18px; height: 18px; }
+  .sp-benefits li.sp-on { color: var(--text-1); }
+  .sp-benefits li.sp-off { color: var(--text-3); }
+  .sp-benefits li.sp-on svg { color: var(--lime); }
+  .sp-benefits li.sp-off svg { color: var(--text-3); }
+  .sp-cta { width: 100%; }
+</style>
+</head>
+<body>
+<div class="aurora-deep"></div>
+<div class="sp-wrap">
+  <div class="sp-head">
+    <div class="brand" style="justify-content:center;margin-bottom:16px">
+      <div class="brand__logo"><svg viewBox="0 0 24 24" width="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5 17.5 17.5M4 12l4-4M16 16l4-4M8 4l12 12M4 8l12 12"/></svg></div>
+      <div class="brand__name">MySystem<span class="text-gradient">Fit</span></div>
+    </div>
+    <h1>Elige el plan de tu cuenta</h1>
+    <p>Empieza gratis o desbloquea las herramientas premium para hacer crecer tu negocio. Puedes cambiar de plan cuando quieras.</p>
+  </div>
+  <div class="sp-grid" id="spGrid"></div>
+</div>
+
+<div class="modal-overlay" id="modal-checkout">
+  <div class="modal modal--wide" style="max-width:480px;padding:14px">
+    <div class="row between" style="align-items:center;padding:4px 6px 10px">
+      <div class="row gap-3" style="align-items:center">
+        <div class="brand__logo" style="width:28px;height:28px"><svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5 17.5 17.5M4 12l4-4M16 16l4-4M8 4l12 12M4 8l12 12"/></svg></div>
+        <div class="fw-600">MySystem<span style="color:var(--indigo-hi)">Fit</span></div>
+      </div>
+      <button class="icon-btn js-modal-close" type="button" aria-label="Cerrar" style="width:32px;height:32px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="checkout-summary" style="padding:12px 6px;border-bottom:1px solid var(--border);margin-bottom:12px">
+      <div class="row between" style="align-items:baseline">
+        <div>
+          <div class="t3 text-sm">Suscripción a</div>
+          <div class="fw-700 fs-18" id="checkoutPlanName">Star</div>
+        </div>
+        <div style="text-align:right">
+          <div class="fw-700 fs-18"><span id="checkoutPlanPrice">$500 MXN</span></div>
+          <div class="t3 text-sm">/mes</div>
+        </div>
+      </div>
+      <div class="badge badge--ok mt-4" style="width:100%;justify-content:center">🔒 Pago seguro procesado por Stripe</div>
+    </div>
+    <div id="checkoutMount" style="min-height:380px;max-height:64vh;overflow:auto;border-radius:12px"></div>
+  </div>
+</div>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/supabaseClient.js"></script>
+<script src="assets/js/auth.js"></script>
+<script src="assets/js/api.js"></script>
+<script src="assets/js/sound.js"></script>
+<script src="assets/js/checkout-shared.js"></script>
+<script>
+(async () => {
+  const $ = (s) => document.querySelector(s);
+  const api = window.msfApi;
+  const auth = await window.msfAuth.requireRole("coach");
+  if (!auth) return;
+  const profile = auth.profile;
+  if (!profile.onboarding_completed) { window.location.href = "onboarding.html"; return; }
+  const params = new URLSearchParams(location.search);
+  if (profile.plan_selected && params.get("checkout") !== "success") {
+    window.location.href = "index.html";
+    return;
+  }
+
+  const okIco = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+  const noIco = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+  const FEATURE_LABEL = { messages: "Mensajes con tus alumnos", objectives: "Objetivos personalizados", photos: "Fotos de progreso", community: "Comunidad", routines: "Rutinas de entrenamiento" };
+  const PLANS = [
+    { key: "Free", cta: "Empezar gratis", ctaClass: "btn--ghost" },
+    { key: "Star", cta: "Elegir Star", ctaClass: "btn--primary", featured: true, badge: "Más recomendado" },
+    { key: "Star Plus", cta: "Elegir Star Plus", ctaClass: "btn--primary" },
+  ];
+
+  $("#spGrid").innerHTML = PLANS.map((p) => {
+    const features = api.planFeatures(p.key);
+    const benefits = Object.keys(FEATURE_LABEL).map((k) =>
+      `<li class="${features[k] ? "sp-on" : "sp-off"}">${features[k] ? okIco : noIco}${FEATURE_LABEL[k]}</li>`
+    ).join("");
+    return `
+      <div class="sp-card ${p.featured ? "sp-card--featured" : ""}">
+        ${p.badge ? `<div class="sp-badge">${p.badge}</div>` : ""}
+        <div class="sp-name">${p.key}</div>
+        <div class="sp-price"><span class="sp-price__amount">${api.planPrice(p.key)}</span>${p.key !== "Free" ? `<span class="sp-price__period">/mes</span>` : ""}</div>
+        <div class="sp-limit">Hasta ${api.planLimit(p.key)} alumnos</div>
+        <ul class="sp-benefits">
+          <li class="sp-on">${okIco}Alumnos, pagos y referidos</li>
+          ${benefits}
+        </ul>
+        <button class="btn ${p.ctaClass} sp-cta" data-plan="${p.key}">${p.cta}</button>
+      </div>`;
+  }).join("");
+
+  $("#spGrid").addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-plan]");
+    if (!btn) return;
+    const plan = btn.getAttribute("data-plan");
+    window.msfSound?.playSound?.("click");
+    if (plan === "Free") {
+      btn.disabled = true;
+      try {
+        const { error } = await window.msfSupabase.rpc("choose_free_plan");
+        if (error) throw error;
+        window.msfSound?.playSound?.("confirm");
+        window.location.href = "index.html";
+      } catch (ex) {
+        btn.disabled = false;
+        window.msfCheckout.errToast(ex, "No se pudo activar el plan Free");
+      }
+      return;
+    }
+    window.msfCheckout.startCheckout(plan);
+  });
+
+  // Cierre genérico de modales (app.js no se carga en esta página standalone).
+  document.addEventListener("click", (e) => {
+    if (e.target.classList.contains("modal-overlay") || e.target.closest(".js-modal-close")) {
+      document.querySelectorAll(".modal-overlay").forEach((m) => m.classList.remove("is-open"));
+    }
+  });
+
+  window.msfCheckout.handleCheckoutReturn({
+    onSynced() { window.location.href = "index.html"; },
+  });
+})();
+</script>
+</body>
+</html>

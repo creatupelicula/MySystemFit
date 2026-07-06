@@ -921,11 +921,19 @@
     // Perfil del coach: nombre real en el chat + herencia de su plan
     try {
       const { data: coach } = await window.msfSupabase
-        .from("profiles").select("full_name, plan").eq("id", PROFILE.coach_id).maybeSingle();
+        .from("profiles").select("full_name, plan, specialty, bio").eq("id", PROFILE.coach_id).maybeSingle();
       if (coach) {
         COACH_NAME = coach.full_name || "";
         $("#chatCoachName") && ($("#chatCoachName").textContent = coach.full_name);
         applyCoachPlan(coach.plan);
+        if (coach.specialty || coach.bio) {
+          $("#aCoachInfoCard") && ($("#aCoachInfoCard").style.display = "");
+          if (coach.specialty) {
+            $("#aCoachSpecialtyRow") && ($("#aCoachSpecialtyRow").style.display = "");
+            $("#aCoachSpecialty") && ($("#aCoachSpecialty").textContent = coach.specialty);
+          }
+          $("#aCoachBio") && ($("#aCoachBio").textContent = coach.bio || "");
+        }
       } else {
         applyCoachPlan(await api.myCoachPlan());
       }

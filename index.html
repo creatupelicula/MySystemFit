@@ -17,6 +17,9 @@
 
   <!-- ============ SIDEBAR ============ -->
   <aside class="sidebar" id="sidebar">
+    <button class="icon-btn drawer__close sidebar__close" id="sidebarClose" aria-label="Cerrar menú">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
     <div class="brand">
       <div class="brand__logo">
         <svg viewBox="0 0 24 24" width="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5 17.5 17.5M4 12l4-4M16 16l4-4M8 4l12 12M4 8l12 12"/></svg>
@@ -381,7 +384,10 @@
             <form id="formProfile">
               <div class="field"><label>Nombre</label><input class="input" id="profName"></div>
               <div class="field"><label>Email</label><input class="input" id="profEmail" disabled></div>
+              <div class="field"><label>Celular</label><input class="input" type="tel" id="profPhone"></div>
+              <div class="field"><label>Años de experiencia</label><input class="input" type="number" min="0" max="60" id="profYears"></div>
               <div class="field"><label>Especialidad</label><input class="input" id="profSpecialty"></div>
+              <div class="field"><label>Descripción breve</label><textarea class="input" id="profBio" style="min-height:90px;resize:vertical" maxlength="400"></textarea></div>
               <button type="submit" class="btn btn--primary">Guardar cambios</button>
               <button type="button" class="btn btn--ghost" id="btnLogout">Cerrar sesión</button>
             </form>
@@ -695,6 +701,7 @@
 <script src="assets/js/auth.js"></script>
 <script src="assets/js/api.js"></script>
 <script src="assets/js/sound.js"></script>
+<script src="assets/js/checkout-shared.js"></script>
 <script src="assets/js/app.js"></script>
 </body>
 </html>

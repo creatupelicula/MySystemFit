@@ -18,9 +18,10 @@ async function syncSubscription(db, sub) {
   // Solo un estado que da acceso mueve el plan efectivo del coach.
   if (plan && (sub.status === "active" || sub.status === "trialing" || sub.status === "past_due")) {
     patch.plan = plan;
+    patch.plan_selected = true; // pago confirmado: no debe volver a ver el gate de selección
   }
-  // Cancelación total → vuelve al piso (Star), conservando el registro de la suscripción.
-  if (sub.status === "canceled") patch.plan = "Star";
+  // Cancelación total → vuelve al piso real (Free), conservando el registro de la suscripción.
+  if (sub.status === "canceled") patch.plan = "Free";
 
   const q = coachId
     ? db.from("profiles").update(patch).eq("id", coachId)

@@ -25,7 +25,30 @@ window.msfAuth = (function () {
       return null;
     }
     if (result.profile.role !== role) {
-      window.location.href = result.profile.role === "coach" ? "index.html" : "alumno.html";
+      window.location.href = result.profile.role === "coach" ? coachLandingPage(result.profile) : "alumno.html";
+      return null;
+    }
+    return result;
+  }
+
+  /* Única fuente de verdad de a dónde debe ir un coach después de autenticarse:
+     primero completa su perfil (onboarding), luego elige plan, y solo entonces
+     entra al dashboard. La usan login.html y requireCoachReady(). */
+  function coachLandingPage(profile) {
+    if (!profile.onboarding_completed) return "onboarding.html";
+    if (!profile.plan_selected) return "select-plan.html";
+    return "index.html";
+  }
+
+  /* Como requireRole("coach") pero además exige haber completado el
+     onboarding y la selección de plan antes de dejar pasar al dashboard. */
+  async function requireCoachReady() {
+    const result = await requireRole("coach");
+    if (!result) return null;
+    const params = new URLSearchParams(location.search);
+    if (!result.profile.onboarding_completed) { window.location.href = "onboarding.html"; return null; }
+    if (!result.profile.plan_selected && params.get("checkout") !== "success") {
+      window.location.href = "select-plan.html";
       return null;
     }
     return result;
@@ -97,5 +120,5 @@ window.msfAuth = (function () {
     if (error) throw error;
   }
 
-  return { getSessionProfile, requireRole, signIn, signUpCoach, signUpStudent, createStudentAccount, signOut, requestPasswordReset, updatePassword };
+  return { getSessionProfile, requireRole, requireCoachReady, coachLandingPage, signIn, signUpCoach, signUpStudent, createStudentAccount, signOut, requestPasswordReset, updatePassword };
 })();
