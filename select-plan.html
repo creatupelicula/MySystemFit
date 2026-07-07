@@ -38,6 +38,10 @@
   .sp-benefits li.sp-on svg { color: var(--lime); }
   .sp-benefits li.sp-off svg { color: var(--text-3); }
   .sp-cta { width: 100%; }
+  .sp-card--soon { opacity: 0.7; }
+  .sp-card--soon:hover { transform: none; border-color: var(--border); box-shadow: none; }
+  .sp-badge--soon { background: var(--surface-3, #26262e); color: var(--text-2); }
+  .sp-cta:disabled { opacity: 0.6; cursor: not-allowed; }
 </style>
 </head>
 <body>
@@ -119,13 +123,14 @@
   ].map((p) => p.key === recommended ? { ...p, featured: true, badge: "Recomendado para ti", ctaClass: "btn--primary" } : p);
 
   $("#spGrid").innerHTML = PLANS.map((p) => {
+    const blocked = window.msfCheckout.isPlanBlocked(p.key);
     const features = api.planFeatures(p.key);
     const benefits = Object.keys(FEATURE_LABEL).map((k) =>
       `<li class="${features[k] ? "sp-on" : "sp-off"}">${features[k] ? okIco : noIco}${FEATURE_LABEL[k]}</li>`
     ).join("");
     return `
-      <div class="sp-card ${p.featured ? "sp-card--featured" : ""}">
-        ${p.badge ? `<div class="sp-badge">${p.badge}</div>` : ""}
+      <div class="sp-card ${blocked ? "sp-card--soon" : (p.featured ? "sp-card--featured" : "")}">
+        ${blocked ? `<div class="sp-badge sp-badge--soon">🚧 En construcción</div>` : (p.badge ? `<div class="sp-badge">${p.badge}</div>` : "")}
         <div class="sp-name">${p.key}</div>
         <div class="sp-price"><span class="sp-price__amount">${api.planPrice(p.key)}</span>${p.key !== "Free" ? `<span class="sp-price__period">/mes</span>` : ""}</div>
         <div class="sp-limit">Hasta ${api.planLimit(p.key)} alumnos</div>
@@ -133,7 +138,9 @@
           <li class="sp-on">${okIco}Alumnos, pagos y referidos</li>
           ${benefits}
         </ul>
-        <button class="btn ${p.ctaClass} sp-cta" data-plan="${p.key}">${p.cta}</button>
+        ${blocked
+          ? `<button class="btn btn--ghost sp-cta" disabled>En construcción</button>`
+          : `<button class="btn ${p.ctaClass} sp-cta" data-plan="${p.key}">${p.cta}</button>`}
       </div>`;
   }).join("");
 

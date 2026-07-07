@@ -108,15 +108,21 @@
   }
   function showUpsell(feat) {
     const meta = FEATURE_PLAN_META[feat] || { plan: "Star", price: "", benefits: [] };
-    $("#upsellTitle") && ($("#upsellTitle").textContent = `Disponible en Plan ${meta.plan}`);
-    $("#upsellText") && ($("#upsellText").textContent = `${FEATURE_NAME[feat] || "Esta función"} está incluida a partir del Plan ${meta.plan}.`);
+    // Planes en construcción (Star Plus/Kings): se muestra el beneficio pero sin
+    // opción de compra — CTA deshabilitado con aviso de "muy pronto".
+    const blocked = window.msfCheckout?.isPlanBlocked?.(meta.plan);
+    $("#upsellTitle") && ($("#upsellTitle").textContent = blocked ? "Muy pronto 🚧" : `Disponible en Plan ${meta.plan}`);
+    $("#upsellText") && ($("#upsellText").textContent = blocked
+      ? `${FEATURE_NAME[feat] || "Esta función"} llegará con el Plan ${meta.plan}, que estamos mejorando. Muy pronto estará disponible.`
+      : `${FEATURE_NAME[feat] || "Esta función"} está incluida a partir del Plan ${meta.plan}.`);
     const benefitsEl = $("#upsellBenefits");
     if (benefitsEl) benefitsEl.innerHTML = meta.benefits.slice(0, 3).map((b) => `<li>${api.esc(b)}</li>`).join("");
-    $("#upsellPrice") && ($("#upsellPrice").textContent = meta.price);
+    $("#upsellPrice") && ($("#upsellPrice").textContent = blocked ? "" : meta.price);
     const cta = $("#upsellCta");
     if (cta) {
-      cta.textContent = meta.plan === "Star Plus" ? "Mejorar a Star Plus" : "Actualizar a Star";
-      cta.onclick = () => { $("#modal-upsell")?.classList.remove("is-open"); startCheckout(meta.plan); };
+      cta.disabled = !!blocked;
+      cta.textContent = blocked ? "En construcción" : (meta.plan === "Star Plus" ? "Mejorar a Star Plus" : "Actualizar a Star");
+      cta.onclick = blocked ? null : () => { $("#modal-upsell")?.classList.remove("is-open"); startCheckout(meta.plan); };
     }
     $("#modal-upsell")?.classList.add("is-open");
   }
@@ -1426,9 +1432,14 @@
     const bStar = $("#btnPlanStar"), bPlus = $("#btnPlanStarPlus"), manage = $("#btnManageSub"), hint = $("#planHint");
     if (bStar && bPlus) {
       bStar.disabled = active && plan === "Star";
-      bPlus.disabled = active && plan === "Star Plus";
       bStar.textContent = plan === "Star" && active ? "Star · plan actual" : `Star · ${api.planPrice("Star")}/mes`;
-      bPlus.textContent = plan === "Star Plus" && active ? "Star Plus · plan actual" : `Star Plus · ${api.planPrice("Star Plus")}/mes`;
+      // Star Plus en construcción: botón deshabilitado con aviso (salvo que el
+      // coach ya lo tuviera activo, para no romperle su plan actual).
+      const plusBlocked = window.msfCheckout?.isPlanBlocked?.("Star Plus") && !(active && plan === "Star Plus");
+      bPlus.disabled = plusBlocked || (active && plan === "Star Plus");
+      bPlus.textContent = plusBlocked
+        ? "Star Plus · En construcción 🚧"
+        : (plan === "Star Plus" && active ? "Star Plus · plan actual" : `Star Plus · ${api.planPrice("Star Plus")}/mes`);
     }
     if (manage) manage.classList.toggle("hidden", !PROFILE.stripe_customer_id);
     if (hint) {

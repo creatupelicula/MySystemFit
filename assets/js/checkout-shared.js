@@ -7,6 +7,13 @@ window.msfCheckout = (function () {
   const $ = (s) => document.querySelector(s);
   const api = window.msfApi;
 
+  /* Planes temporalmente EN CONSTRUCCIÓN: visibles pero no seleccionables ni
+     comprables (el coach está haciendo mejoras). Para reactivarlos, basta con
+     vaciar este Set. El backend (api/checkout.js) hace la misma validación por
+     su cuenta, así que aunque alguien salte la UI no puede suscribirse. */
+  const BLOCKED_PLANS = new Set(["Star Plus", "Kings"]);
+  const isPlanBlocked = (plan) => BLOCKED_PLANS.has(plan);
+
   const icons = {
     ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
     err: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
@@ -45,6 +52,7 @@ window.msfCheckout = (function () {
   }
   async function startCheckout(plan) {
     try {
+      if (isPlanBlocked(plan)) return toast("Este plan está en construcción", "Muy pronto estará disponible.", "info");
       const { data: { session } } = await window.msfSupabase.auth.getSession();
       if (!session) return toast("Sesión expirada, vuelve a entrar", "", "err");
       $("#checkoutPlanName") && ($("#checkoutPlanName").textContent = plan);
@@ -112,9 +120,12 @@ window.msfCheckout = (function () {
   const STAR_GOALS = ["Dar seguimiento profesional", "Organizar mejor mis alumnos", "Conseguir más clientes"];
   function recommendPlan({ students, goal }) {
     const n = students || 0;
-    if (n >= 15 || AUTOMATION_GOALS.includes(goal)) return "Star Plus";
-    if (n >= 5 || STAR_GOALS.includes(goal)) return "Star";
-    return "Free";
+    let plan = "Free";
+    if (n >= 15 || AUTOMATION_GOALS.includes(goal)) plan = "Star Plus";
+    else if (n >= 5 || STAR_GOALS.includes(goal)) plan = "Star";
+    // Nunca recomendar un plan en construcción: cae al mejor disponible (Star).
+    if (isPlanBlocked(plan)) plan = "Star";
+    return plan;
   }
   function recommendationText(plan, { students, goal }) {
     const n = students || 0;
@@ -129,5 +140,5 @@ window.msfCheckout = (function () {
     return `Te recomendamos el Plan Gratuito porque ${alumnosTxt}: es ideal para conocer la plataforma sin costo. Podrás actualizar de plan cuando lo necesites.`;
   }
 
-  return { loadStripeJs, destroyEmbeddedCheckout, startCheckout, handleCheckoutReturn, toast, errToast, recommendPlan, recommendationText };
+  return { loadStripeJs, destroyEmbeddedCheckout, startCheckout, handleCheckoutReturn, toast, errToast, recommendPlan, recommendationText, isPlanBlocked, BLOCKED_PLANS };
 })();

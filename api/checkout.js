@@ -6,6 +6,12 @@ module.exports = async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Método no permitido" });
   try {
     const { access_token, plan } = await readJson(req);
+    // Planes en construcción: bloqueados también en el backend, para que nadie
+    // pueda suscribirse llamando al endpoint directamente. Reactivar = vaciar el Set.
+    const BLOCKED_PLANS = new Set(["Star Plus", "Kings"]);
+    if (BLOCKED_PLANS.has(plan)) {
+      return res.status(403).json({ error: "Este plan está en construcción y no está disponible por ahora." });
+    }
     const price = PRICE_BY_PLAN[plan];
     if (!price) return res.status(400).json({ error: "Plan inválido" });
 
