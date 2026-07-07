@@ -65,8 +65,12 @@ async function confirmTrialUpgrade(db, sk, coachId) {
   if (profile.stripe_schedule_id) {
     await sk.subscriptionSchedules.release(profile.stripe_schedule_id);
   }
+  // Hay que reemplazar el ítem ACTUAL (pasando su id), no añadir uno nuevo:
+  // `items: [{ price }]` sin id crea una segunda línea y cobraría doble.
+  const sub = await sk.subscriptions.retrieve(profile.stripe_subscription_id);
+  const itemId = sub.items?.data?.[0]?.id;
   await sk.subscriptions.update(profile.stripe_subscription_id, {
-    items: [{ price: PRICE_BY_PLAN["Star Plus"] }],
+    items: [{ id: itemId, price: PRICE_BY_PLAN["Star Plus"] }],
   });
   await db.from("profiles").update({
     gift_plan: null, pre_gift_plan: null, gift_started_at: null,

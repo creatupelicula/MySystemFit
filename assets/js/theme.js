@@ -8,6 +8,13 @@ window.msfTheme = (function () {
   const KEY_MODE = "msf_theme_mode";      // 'dark' | 'light'
   const KEY_ACCENT = "msf_accent";        // hex, ej '#6C5CE7'
 
+  /* localStorage seguro: Safari en modo privado / Lockdown puede lanzar al
+     leer o escribir. Sin este blindaje, un throw aquí dejaría window.msfTheme
+     sin inicializar y toda la app (que llama msfTheme.*) se caería. */
+  function lsGet(k) { try { return window.localStorage.getItem(k); } catch (_) { return null; } }
+  function lsSet(k, v) { try { window.localStorage.setItem(k, v); } catch (_) { /* noop */ } }
+  function lsRemove(k) { try { window.localStorage.removeItem(k); } catch (_) { /* noop */ } }
+
   /* Paleta de acentos sugeridos (el primero es el default de la marca) */
   const PRESETS = [
     { name: "Azul eléctrico", hex: "#2E6BFF" },
@@ -49,17 +56,17 @@ window.msfTheme = (function () {
   }
 
   /* ---- API pública ---- */
-  function getMode() { return localStorage.getItem(KEY_MODE) || "dark"; }
-  function getAccent() { return localStorage.getItem(KEY_ACCENT) || PRESETS[0].hex; }
-  function setMode(mode) { localStorage.setItem(KEY_MODE, mode); applyMode(mode); }
+  function getMode() { return lsGet(KEY_MODE) || "dark"; }
+  function getAccent() { return lsGet(KEY_ACCENT) || PRESETS[0].hex; }
+  function setMode(mode) { lsSet(KEY_MODE, mode); applyMode(mode); }
   function toggleMode() { const next = getMode() === "light" ? "dark" : "light"; setMode(next); return next; }
-  function setAccent(hex) { localStorage.setItem(KEY_ACCENT, hex); applyAccent(hex); }
-  function reset() { localStorage.removeItem(KEY_ACCENT); applyAccent(PRESETS[0].hex); }
+  function setAccent(hex) { lsSet(KEY_ACCENT, hex); applyAccent(hex); }
+  function reset() { lsRemove(KEY_ACCENT); applyAccent(PRESETS[0].hex); }
 
   /* Migración: si el acento guardado es el índigo viejo de la marca
      anterior, se resetea al azul eléctrico actual. */
-  if ((localStorage.getItem(KEY_ACCENT) || "").toLowerCase() === "#6c5ce7") {
-    localStorage.removeItem(KEY_ACCENT);
+  if ((lsGet(KEY_ACCENT) || "").toLowerCase() === "#6c5ce7") {
+    lsRemove(KEY_ACCENT);
   }
 
   /* Aplicar de inmediato al cargar el script */

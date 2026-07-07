@@ -866,7 +866,7 @@
       $("#builderTitle") && ($("#builderTitle").textContent = `Rutina de ${s ? s.full_name : ""} · ${routine.phase || ""} · Semana ${routine.week || 1}`);
       const days = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"];
       const dayLabels = { lunes: "Lunes", martes: "Martes", miercoles: "Miércoles", jueves: "Jueves", viernes: "Viernes", sabado: "Sábado", domingo: "Domingo" };
-      board.innerHTML = days.slice(0, 4).map((d) => {
+      board.innerHTML = days.map((d) => {
         const existing = routine.days.find((x) => x.day_name === d);
         const exercises = existing?.exercises || [];
         return `<div class="day-col" data-day="${d}">
@@ -1274,7 +1274,7 @@
   }
   function updateKpis() {
     const fin = api.financeKpis(PAYMENTS);
-    const active = STUDENTS.filter((s) => s.state === "activo").length;
+    const active = STUDENTS.filter((s) => s.display_state === "activo").length;
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
