@@ -8,6 +8,27 @@ window.msfApi = (function () {
   const ESC_MAP = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
   const esc = (str) => String(str ?? "").replace(/[&<>"']/g, (c) => ESC_MAP[c]);
 
+  /* Parsea montos en MXN aceptando cualquier formato razonable: "1000",
+     "1,000", "1 000", "1000.00", "1000,00". Regla para desambiguar el
+     último separador: si le siguen exactamente 3 dígitos es de miles
+     (se descarta), si le siguen 1-2 dígitos es el decimal. */
+  function parseMoneyMXN(raw) {
+    if (raw == null) return null;
+    let s = String(raw).trim().replace(/[^\d.,]/g, "");
+    if (s === "") return null;
+    const lastSep = Math.max(s.lastIndexOf(","), s.lastIndexOf("."));
+    let n;
+    if (lastSep === -1) {
+      n = Number(s);
+    } else {
+      const intPart = s.slice(0, lastSep).replace(/[.,]/g, "");
+      const fracPart = s.slice(lastSep + 1).replace(/[.,]/g, "");
+      n = fracPart.length === 3 ? Number(intPart + fracPart) : Number((intPart || "0") + "." + fracPart);
+    }
+    return Number.isFinite(n) ? n : null;
+  }
+  const formatMoneyMXN = (n) => (n == null || !Number.isFinite(n) ? "" : n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+
   /* Traduce errores técnicos (Auth/BD/red) a mensajes de marca en español.
      El detalle técnico NUNCA se muestra al usuario: va solo a console.error. */
   function friendlyError(ex) {
@@ -60,7 +81,9 @@ window.msfApi = (function () {
 
   /* ---------- Students ---------- */
   async function listStudents(coachId) {
-    const { data, error } = await sb().from("students").select("*").eq("coach_id", coachId).order("full_name");
+    // students_with_state agrega display_state (activo/suspendido/sin_iniciar_sesion),
+    // calculado en la BD a partir del último login y la última actividad real.
+    const { data, error } = await sb().from("students_with_state").select("*").eq("coach_id", coachId).order("full_name");
     if (error) throw error;
     return data.map((s) => ({ ...s, initials: initials(s.full_name) }));
   }
@@ -138,8 +161,13 @@ window.msfApi = (function () {
     return data;
   }
   async function deleteStudent(id) {
-    const { error } = await sb().from("students").delete().eq("id", id);
-    if (error) throw error;
+    const { data: { session } } = await sb().auth.getSession();
+    const r = await fetch("/api/delete-student", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ access_token: session?.access_token, student_id: id }),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.error || "No se pudo eliminar al alumno");
   }
 
   /* ---------- Payments ---------- */
@@ -523,6 +551,12 @@ window.msfApi = (function () {
     if (error) throw error;
     return data || [];
   }
+  async function listStudentNotifications(studentId) {
+    const { data, error } = await sb().from("notifications")
+      .select("*").eq("student_id", studentId).order("created_at", { ascending: false }).limit(30);
+    if (error) throw error;
+    return data || [];
+  }
   async function markNotificationRead(id) {
     const { error } = await sb().from("notifications").update({ read: true }).eq("id", id);
     if (error) throw error;
@@ -530,6 +564,7 @@ window.msfApi = (function () {
 
   return {
     initials, esc, friendlyError,
+    parseMoneyMXN, formatMoneyMXN,
     planLimit, planFeatures, planPrice, can, myCoachPlan, countStudents,
     getReferralInfo,
     saveDailySurvey, cancelAttendance, myAttendance, listCoachAttendance, resetAttendanceDay, listMyAttendance,
@@ -539,6 +574,7 @@ window.msfApi = (function () {
     listStudentObjectives, assignObjective, unassignObjective, setObjectiveStatus,
     financeKpis,
     listStudents, createStudent, createStudentFull, updateStudent, deleteStudent,
+    listStudentNotifications,
     listPayments, markPaymentPaid, createPayment,
     getStudentRoutine, createRoutine, saveRoutineDay,
     listFollowUps, toggleFollowUp, createFollowUp,

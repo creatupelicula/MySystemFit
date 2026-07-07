@@ -9,6 +9,7 @@
 
   let PROFILE = null;
   let STUDENT = null;
+  let STUDENT_NOTIFICATIONS = [];
 
   function toast(txt, type = "ok") {
     const stack = $("#toastStack");
@@ -36,6 +37,33 @@
   }
   document.addEventListener("click", (e) => {
     if (e.target.closest("#aLogout") || e.target.closest("#aLogoutSettings")) { e.preventDefault(); doLogout(); }
+  });
+
+  /* Eliminación de la propia cuenta (real y permanente, mismo endpoint que usa el coach). */
+  document.addEventListener("click", (e) => {
+    if (e.target.closest("#aBtnDeleteAccount")) {
+      window.msfSound?.playSound?.("click");
+      $("#modal-aDeleteAccount")?.classList.add("is-open");
+    } else if (e.target.classList.contains("modal-overlay") || e.target.closest(".js-modal-close")) {
+      $$(".modal-overlay").forEach((m) => m.classList.remove("is-open"));
+    }
+  });
+  $("#aBtnConfirmDeleteAccount")?.addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    try {
+      const { data: { session } } = await window.msfSupabase.auth.getSession();
+      const r = await fetch("/api/delete-account", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ access_token: session?.access_token }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || "No se pudo eliminar la cuenta");
+      window.msfSound?.playSound?.("delete");
+      await window.msfSupabase.auth.signOut();
+      sessionStorage.setItem("msf_account_deleted", "1");
+      window.location.href = "login.html";
+    } catch (ex) { btn.disabled = false; errToast(ex, "No se pudo eliminar la cuenta"); }
   });
 
   /* Navegación bottom nav. Las vistas bloqueadas por el plan del coach NUNCA
@@ -637,6 +665,52 @@
     loadAttendance();
   }
 
+  /* ---------- Centro de notificaciones (campana real, separada del chat) ---------- */
+  const NOTIF_NAV = { message: "chat", objective_assigned: "home", objective_updated: "home", payment_confirmed: "home", routine_assigned: "rutina", routine_updated: "rutina" };
+  async function loadStudentNotifications() {
+    if (!STUDENT) return;
+    try { STUDENT_NOTIFICATIONS = await api.listStudentNotifications(STUDENT.id); renderStudentNotifications(); }
+    catch (ex) { console.error("No se pudieron cargar las notificaciones:", ex); }
+  }
+  function renderStudentNotifications() {
+    const list = $("#aNotifList"), dot = $("#aNotifDot");
+    if (!list) return;
+    const unread = STUDENT_NOTIFICATIONS.filter((n) => !n.read).length;
+    if (dot) { dot.textContent = unread; dot.classList.toggle("hidden", unread === 0); }
+    list.innerHTML = STUDENT_NOTIFICATIONS.map((n) => `
+      <button class="notif-item ${!n.read ? "is-unread" : ""}" data-anotif-nav="${NOTIF_NAV[n.type] || "home"}" data-anotif-id="${n.id}">
+        <span class="notif-item__ico notif-item__ico--indigo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="3"/></svg></span>
+        <span class="notif-item__body"><span class="notif-item__txt">${api.esc(n.message)}</span><span class="notif-item__sub">${new Date(n.created_at).toLocaleString("es-MX", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span></span>
+      </button>`).join("") || `<p class="t3 text-sm" style="padding:16px;text-align:center">Todo al día 🎉</p>`;
+  }
+  document.addEventListener("click", (e) => {
+    if (e.target.closest("#aBellBtn")) {
+      e.stopPropagation();
+      $("#aNotifPanel")?.classList.toggle("is-open");
+      renderStudentNotifications();
+      return;
+    }
+    const n = e.target.closest("[data-anotif-nav]");
+    if (n) {
+      anav(n.dataset.anotifNav);
+      const item = STUDENT_NOTIFICATIONS.find((x) => x.id === n.dataset.anotifId);
+      if (item && !item.read) {
+        item.read = true;
+        api.markNotificationRead(item.id).catch(() => {});
+        renderStudentNotifications();
+      }
+      $("#aNotifPanel")?.classList.remove("is-open");
+      return;
+    }
+    if (!e.target.closest(".notif-wrap")) $("#aNotifPanel")?.classList.remove("is-open");
+  });
+  $("#aNotifMarkAll")?.addEventListener("click", async () => {
+    const unread = STUDENT_NOTIFICATIONS.filter((n) => !n.read);
+    STUDENT_NOTIFICATIONS.forEach((n) => (n.read = true));
+    renderStudentNotifications();
+    await Promise.all(unread.map((n) => api.markNotificationRead(n.id).catch(() => {})));
+  });
+
   /* Realtime: nuevos mensajes del coach llegan sin recargar */
   function subscribeRealtime() {
     if (!STUDENT || !window.msfSupabase) return;
@@ -675,6 +749,14 @@
       .on("postgres_changes",
         { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${PROFILE.coach_id}` },
         (payload) => { if (payload.new?.plan) applyCoachPlan(payload.new.plan); })
+      .subscribe();
+    // Centro de notificaciones: canal dedicado (evita compartir demasiados
+    // bindings filtrados con el canal principal, ver alumno-rt-).
+    window.msfSupabase
+      .channel("alumno-notif-" + STUDENT.id)
+      .on("postgres_changes",
+        { event: "*", schema: "public", table: "notifications", filter: `student_id=eq.${STUDENT.id}` },
+        () => loadStudentNotifications())
       .subscribe();
   }
 
@@ -951,6 +1033,7 @@
     loadPendingPayment();
     loadWeekStats();
     renderPhotoTimeline();
+    loadStudentNotifications();
     subscribeRealtime();
   }
 

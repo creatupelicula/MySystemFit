@@ -18,6 +18,12 @@ module.exports = async function handler(req, res) {
         console.error("No se pudo cancelar la suscripción antes de eliminar la cuenta:", ex);
       }
     }
+    // students.profile_id es ON DELETE SET NULL (no CASCADE): si el alumno se
+    // borra a sí mismo, su fila en `students` quedaría como un fantasma
+    // "pendiente" en el panel del coach si no se borra aparte.
+    if (profile.role === "alumno") {
+      await db.from("students").delete().eq("profile_id", user.id);
+    }
     const { error } = await admin().auth.admin.deleteUser(user.id);
     if (error) throw error;
     return res.status(200).json({ ok: true });

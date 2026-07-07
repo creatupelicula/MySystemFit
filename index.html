@@ -109,11 +109,6 @@
 
       <!-- ===================== DASHBOARD ===================== -->
       <section class="view is-active" id="view-dashboard">
-        <div class="card mb-4" id="objReminderDash" style="display:none;align-items:center;gap:14px;border:1px solid var(--indigo);background:var(--indigo-soft)">
-          <span style="font-size:22px">🎯</span>
-          <div style="flex:1"><div class="fw-600">Crea al menos 3 objetivos para mejorar la experiencia de tus alumnos.</div><p class="t3 text-sm" style="margin:2px 0 0">Tus alumnos los verán en su cuestionario de bienvenida y se asignarán solos.</p></div>
-          <button class="btn btn--primary btn--sm" data-nav="ajustes">Crear objetivos</button>
-        </div>
         <div class="kpi-grid">
           <div class="kpi kpi--indigo tilt">
             <div class="kpi__top">
@@ -255,7 +250,8 @@
           <button class="pill">Online</button>
           <button class="pill">Presencial</button>
           <button class="pill"><span class="badge__dot"></span>Activos</button>
-          <button class="pill">Pendientes</button>
+          <button class="pill">Sin iniciar sesión</button>
+          <button class="pill">Suspendidos</button>
           <button class="pill">Atrasados</button>
           <button class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>Objetivo</button>
         </div>
@@ -487,7 +483,6 @@
 
         <div class="card mt-6" id="objectivesCardCoach">
           <div class="section-title">Objetivos</div>
-          <div class="mb-4" id="objReminderSettings" style="display:none;align-items:center;gap:10px;padding:12px 14px;border-radius:12px;border:1px solid var(--indigo);background:var(--indigo-soft)"><span>🎯</span><span class="text-sm fw-600">Crea al menos 3 objetivos para mejorar la experiencia de tus alumnos.</span></div>
           <p class="t3 text-sm mb-4">Los 5 objetivos del catálogo están disponibles para asignar en cualquier plan. Con Star o superior puedes crear objetivos personalizados (ej. Perder grasa, Ganar masa muscular, Running, Crossfit…) que se asignan automáticamente cuando el alumno complete su cuestionario de bienvenida.</p>
           <div id="objectivesCustomWrap">
             <form id="formObjective" class="stack gap-3 mb-4">
@@ -643,13 +638,12 @@
         <div class="field"><label for="nsEmail">Correo (será su usuario)</label><input class="input" type="email" id="nsEmail" placeholder="alumno@correo.com"></div>
         <div class="field"><label for="nsPassword">Contraseña de acceso</label><input class="input" type="text" id="nsPassword" placeholder="mín. 6 caracteres" minlength="6"></div>
         <div class="field"><label for="nsType">Tipo</label><select class="select" id="nsType"><option>Online</option><option>Presencial</option></select></div>
-        <div class="field"><label for="nsState">Estado del alumno</label><select class="select" id="nsState"><option value="pendiente">Pendiente</option><option value="activo">Activo</option><option value="suspendido">Suspendido</option><option value="inactivo">Inactivo</option><option value="cancelado">Cancelado</option></select></div>
         <div class="field"><label for="nsGoal">Objetivo</label><select class="select" id="nsGoal"></select></div>
         <div class="field"><label for="nsWeight">Peso actual (kg)</label><input class="input" type="number" step="0.1" id="nsWeight" placeholder="70"></div>
         <div class="field"><label for="nsWeightGoal">Peso objetivo (kg)</label><input class="input" type="number" step="0.1" id="nsWeightGoal" placeholder="65"></div>
         <div class="field"><label for="nsStart">Inicio de membresía</label><input class="input" type="date" id="nsStart"></div>
         <div class="field"><label for="nsEnd">Fin de membresía</label><input class="input" type="date" id="nsEnd"></div>
-        <div class="field"><label for="nsAmount">Monto de pago ($)</label><input class="input" type="number" step="0.01" id="nsAmount" placeholder="85"></div>
+        <div class="field"><label for="nsAmount">Monto de pago</label><div class="row gap-3" style="align-items:center"><input class="input" type="text" inputmode="decimal" id="nsAmount" placeholder="1,000.00" style="flex:1"><span class="t3 text-sm" style="white-space:nowrap">MXN</span></div></div>
         <div class="field"><label for="nsPayState">Estado de pago</label><select class="select" id="nsPayState"><option value="pend">Pendiente</option><option value="ok">Pagado</option></select></div>
         <div class="field field--full"><label for="nsNotes">Notas privadas</label><textarea class="input textarea" id="nsNotes" placeholder="Lesiones, preferencias, observaciones…"></textarea></div>
       </div>
@@ -667,7 +661,7 @@
       <div class="field"><label>Alumno *</label><select class="select" id="npStudent" required></select></div>
       <div class="row gap-3">
         <div class="field" style="flex:1"><label>Concepto</label><input class="input" id="npConcept" value="Membresía"></div>
-        <div class="field" style="flex:1"><label>Monto ($) *</label><input class="input" type="number" step="0.01" id="npAmount" required placeholder="85"></div>
+        <div class="field" style="flex:1"><label>Monto *</label><div class="row gap-3" style="align-items:center"><input class="input" type="text" inputmode="decimal" id="npAmount" required placeholder="1,000.00" style="flex:1"><span class="t3 text-sm" style="white-space:nowrap">MXN</span></div></div>
       </div>
       <div class="row gap-3">
         <div class="field" style="flex:1"><label>Vencimiento *</label><input class="input" type="date" id="npDue" required></div>

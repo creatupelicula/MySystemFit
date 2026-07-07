@@ -22,7 +22,16 @@
       <div class="a-top__hi">Hola de nuevo,</div>
       <div class="a-top__name"></div>
     </div>
-    <button class="icon-btn" id="aBellBtn" data-anav="chat" aria-label="Mensajes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="icon-btn__dot hidden" id="aNotifDot">0</span></button>
+    <div class="notif-wrap">
+      <button class="icon-btn" id="aBellBtn" aria-label="Notificaciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="icon-btn__dot hidden" id="aNotifDot">0</span></button>
+      <div class="notif-panel" id="aNotifPanel">
+        <div class="notif-panel__head">
+          <span>Notificaciones</span>
+          <button class="btn btn--ghost btn--sm" id="aNotifMarkAll">Marcar leídas</button>
+        </div>
+        <div class="notif-panel__body" id="aNotifList"></div>
+      </div>
+    </div>
     <button class="icon-btn" data-anav="ajustes" aria-label="Ajustes" title="Ajustes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
     <button class="icon-btn" id="aLogout" aria-label="Cerrar sesión" title="Cerrar sesión"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
   </header>
@@ -234,7 +243,13 @@
         </div>
       </div>
 
-      <button class="btn btn--ghost btn--block" id="aLogoutSettings">Cerrar sesión</button>
+      <button class="btn btn--ghost btn--block mb-4" id="aLogoutSettings">Cerrar sesión</button>
+
+      <div class="card">
+        <div class="section-title">Zona de peligro</div>
+        <p class="t3 text-sm mb-4">Eliminar tu cuenta borra todos tus datos de forma permanente.</p>
+        <button class="btn btn--danger" id="aBtnDeleteAccount">Eliminar cuenta</button>
+      </div>
     </section>
 
   </div>
@@ -253,6 +268,15 @@
     <button data-anav="comunidad"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>Comunidad</button>
     <button data-anav="chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>Coach</button>
   </nav>
+</div>
+
+<div class="modal-overlay" id="modal-aDeleteAccount">
+  <div class="modal">
+    <div class="modal__ico danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></div>
+    <h3>¿Eliminar tu cuenta?</h3>
+    <p>Esta acción es permanente. Se borrará tu perfil, objetivos, rutinas, mensajes y todo tu historial. No se puede deshacer.</p>
+    <div class="modal__actions"><button class="btn btn--ghost js-modal-close">Cancelar</button><button class="btn btn--danger" id="aBtnConfirmDeleteAccount" style="background:var(--coral);color:#fff;border-color:transparent">Sí, eliminar</button></div>
+  </div>
 </div>
 
 <div class="toast-stack" id="toastStack"></div>

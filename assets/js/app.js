@@ -19,11 +19,40 @@
   // Estados de PAGOS (ok/pend/late) — no confundir con estados del alumno
   const badgeClass = { ok: "badge--ok", pend: "badge--pend", late: "badge--late" };
   const stateLabel = { ok: "Activa", pend: "Pendiente", late: "Atrasada" };
-  // Estados del ALUMNO: pendiente/activo/suspendido/inactivo/cancelado
-  const S_BADGE = { activo: "badge--ok", pendiente: "badge--pend", suspendido: "badge--pend", inactivo: "badge--late", cancelado: "badge--late" };
-  const S_LABEL = { activo: "Activo", pendiente: "Pendiente", suspendido: "Suspendido", inactivo: "Inactivo", cancelado: "Cancelado" };
+  // Estado visible del alumno (100% calculado en la BD, ver display_state en
+  // students_with_state): activo / suspendido / sin_iniciar_sesion.
+  const S_BADGE = { activo: "badge--ok", suspendido: "badge--late", sin_iniciar_sesion: "badge--pend" };
+  const S_LABEL = { activo: "Activo", suspendido: "Suspendido", sin_iniciar_sesion: "Sin iniciar sesión" };
   const sBadge = (st) => S_BADGE[st] || "badge--pend";
-  const sLabel = (st) => S_LABEL[st] || "Pendiente";
+  const sLabel = (st) => S_LABEL[st] || "Sin iniciar sesión";
+
+  /* Máscara de moneda MXN en vivo: agrega comas de miles mientras se
+     escribe y limita a 2 decimales tras un punto. Las comas que el usuario
+     escriba se ignoran (las pone el formateador solo) para no chocar con el
+     separador decimal; texto pegado se re-parsea con parseMoneyMXN. */
+  function attachMoneyInput(el) {
+    if (!el) return;
+    el.setAttribute("inputmode", "decimal");
+    function reformat() {
+      const distFromEnd = el.value.length - el.selectionStart;
+      const raw = el.value.replace(/[^\d.]/g, "");
+      const dotIdx = raw.indexOf(".");
+      let intDigits = dotIdx === -1 ? raw : raw.slice(0, dotIdx);
+      const decDigits = dotIdx === -1 ? null : raw.slice(dotIdx + 1).replace(/\./g, "").slice(0, 2);
+      intDigits = intDigits.replace(/^0+(?=\d)/, "");
+      const intFormatted = intDigits ? Number(intDigits).toLocaleString("es-MX") : "";
+      el.value = decDigits !== null ? `${intFormatted}.${decDigits}` : intFormatted;
+      const pos = Math.max(0, el.value.length - distFromEnd);
+      el.setSelectionRange(pos, pos);
+    }
+    el.addEventListener("input", reformat);
+    el.addEventListener("paste", (e) => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData("text");
+      const n = api.parseMoneyMXN(text);
+      el.value = n != null ? api.formatMoneyMXN(n) : "";
+    });
+  }
 
   /* ---------- Toast ---------- */
   const icons = {
@@ -179,7 +208,7 @@
         // "Atrasados" = alumnos con algún pago vencido sin cobrar
         const now = new Date(new Date().toDateString());
         if (!PAYMENTS.some((p) => p.student_id === s.id && p.state !== "ok" && new Date(p.due_date) < now)) return false;
-      } else if (studentFilter.state !== "all" && s.state !== studentFilter.state) return false;
+      } else if (studentFilter.state !== "all" && s.display_state !== studentFilter.state) return false;
       return true;
     });
   }
@@ -201,7 +230,7 @@
       return `
       <tr data-student="${s.id}" style="cursor:pointer">
         <td><div class="cell-user"><div class="avatar avatar--sm">${s.initials}</div><div><div class="cell-user__name">${api.esc(s.full_name)}</div><div class="cell-user__sub">${s.age ? s.age + " años" : "—"}</div></div></div></td>
-        <td><span class="badge ${sBadge(s.state)}">${sLabel(s.state)}</span></td>
+        <td><span class="badge ${sBadge(s.display_state)}">${sLabel(s.display_state)}</span></td>
         <td>${api.esc(s.training_type)}</td>
         <td class="muted">${api.esc(s.goal || "—")}</td>
         <td><span style="color:var(--${due.tone === "t3" ? "text-3" : due.tone});font-family:var(--font-mono);font-size:13px">${due.text}</span></td>
@@ -218,7 +247,7 @@
       return `
       <div class="card card--hover student-card" data-student="${s.id}" style="cursor:pointer">
         <div class="student-card__head"><div class="avatar avatar--md">${s.initials}</div><div><div class="student-card__name">${api.esc(s.full_name)}</div><div class="student-card__sub">${s.age ? s.age + " años · " : ""}${api.esc(s.training_type)}</div></div></div>
-        <div style="margin-bottom:12px"><span class="badge ${sBadge(s.state)}">${sLabel(s.state)}</span></div>
+        <div style="margin-bottom:12px"><span class="badge ${sBadge(s.display_state)}">${sLabel(s.display_state)}</span></div>
         <div class="student-card__rows">
           <div class="kv"><span>Objetivo</span><span>${api.esc(s.goal || "—")}</span></div>
           <div class="kv"><span>Próximo pago</span><span style="color:var(--${due.tone === "t3" ? "text-2" : due.tone})">${due.text}</span></div>
@@ -229,7 +258,7 @@
 
     const headP = $("#view-alumnos .page-head p");
     if (headP) {
-      const active = STUDENTS.filter((s) => s.state === "activo").length;
+      const active = STUDENTS.filter((s) => s.display_state === "activo").length;
       const pend = new Set(PAYMENTS.filter((p) => p.state !== "ok").map((p) => p.student_id)).size;
       headP.textContent = `${active} activos · ${pend} pendientes de pago · ${STUDENTS.length} total`;
     }
@@ -299,7 +328,7 @@
       arr.forEach((p) => p.classList.remove("is-active"));
       pill.classList.add("is-active");
       const txt = pill.textContent.trim();
-      const map = { "Todos": ["all", "all"], "Online": ["Online", "all"], "Presencial": ["Presencial", "all"], "Activos": ["all", "activo"], "Pendientes": ["all", "pendiente"], "Atrasados": ["all", "late"] };
+      const map = { "Todos": ["all", "all"], "Online": ["Online", "all"], "Presencial": ["Presencial", "all"], "Activos": ["all", "activo"], "Sin iniciar sesión": ["all", "sin_iniciar_sesion"], "Suspendidos": ["all", "suspendido"], "Atrasados": ["all", "late"] };
       const key = Object.keys(map).find((k) => txt.includes(k)) || "Todos";
       studentFilter.type = map[key][0];
       studentFilter.state = map[key][1];
@@ -319,8 +348,8 @@
     $("#dwAvatar").textContent = s.initials;
     $("#dwName").textContent = s.full_name;
     const st = $("#dwState");
-    st.className = "badge " + sBadge(s.state);
-    st.textContent = sLabel(s.state);
+    st.className = "badge " + sBadge(s.display_state);
+    st.textContent = sLabel(s.display_state);
     $("#dwAgeBadge") && ($("#dwAgeBadge").textContent = s.age ? s.age + " años" : "Edad —");
     $("#dwAge") && ($("#dwAge").textContent = s.age ?? "—");
     $("#dwSex") && ($("#dwSex").textContent = s.sex || "—");
@@ -438,7 +467,6 @@
     $("#nsName").value = s.full_name || "";
     $("#nsPhone").value = s.phone || "";
     $("#nsType").value = s.training_type || "Online";
-    $("#nsState") && ($("#nsState").value = s.state || "pendiente");
     await fillGoalSelect($("#nsGoal"), s.goal);
     $("#nsWeight").value = s.weight_current ?? "";
     $("#nsWeightGoal").value = s.weight_goal ?? "";
@@ -448,6 +476,8 @@
     setStudentModalMode(true);
     $("#modal-newStudent").classList.add("is-open");
   }
+  attachMoneyInput($("#nsAmount"));
+  attachMoneyInput($("#npAmount"));
   $("#btnEditStudent")?.addEventListener("click", async () => { if (CURRENT_STUDENT_ID) await openStudentEditor(CURRENT_STUDENT_ID); });
   $("#btnDeleteStudent")?.addEventListener("click", () => {
     if (!CURRENT_STUDENT_ID) return;
@@ -559,7 +589,6 @@
           full_name: name,
           phone: $("#nsPhone").value.trim() || null,
           training_type: $("#nsType").value,
-          state: $("#nsState")?.value || "pendiente",
           goal: $("#nsGoal").value,
           weight_current: num($("#nsWeight").value),
           weight_goal: num($("#nsWeightGoal").value),
@@ -590,8 +619,7 @@
         weight_goal: num($("#nsWeightGoal").value),
         member_since: $("#nsStart").value || null,
         membership_end: $("#nsEnd").value || null,
-        payment_amount: num($("#nsAmount").value),
-        state: $("#nsState")?.value || "pendiente",
+        payment_amount: api.parseMoneyMXN($("#nsAmount").value),
         pay_state: $("#nsPayState").value,
         private_notes: $("#nsNotes").value.trim(),
       });
@@ -620,7 +648,7 @@
   $("#formNewPayment")?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const studentId = $("#npStudent").value;
-    const amount = Number($("#npAmount").value);
+    const amount = api.parseMoneyMXN($("#npAmount").value);
     if (!studentId || !amount) return;
     try {
       await api.createPayment(PROFILE.id, {
@@ -1341,7 +1369,6 @@
     $("#objectivesCustomWrap")?.classList.toggle("hidden", !FEATURES.objectives);
     const objLocked = $("#objectivesCustomLocked");
     if (objLocked) objLocked.style.display = FEATURES.objectives ? "none" : "block";
-    updateObjectiveReminder();
     // Pestañas de la ficha del alumno: en Free solo Información, Pagos y Notas
     Object.entries(TAB_FEATURE).forEach(([tab, feat]) => {
       const t = $(`#dwTabs .tab[data-tab="${tab}"]`);
@@ -1738,6 +1765,14 @@
         applyPlanGating();
       })
       .subscribe();
+    // Objetivos personalizados: canal dedicado (si el coach los edita desde
+    // otra sesión/dispositivo, la vista de Objetivos se refresca sola).
+    window.msfSupabase
+      .channel("coach-objectives-" + PROFILE.id)
+      .on("postgres_changes", { event: "*", schema: "public", table: "coach_objectives", filter: `coach_id=eq.${PROFILE.id}` }, () => {
+        renderObjectives();
+      })
+      .subscribe();
   }
 
   /* ---------- Init ---------- */
@@ -1759,7 +1794,6 @@
     if (!list) return;
     try {
       OBJECTIVES = await api.listCatalogAndCustom(PROFILE.id);
-      updateObjectiveReminder();
       const system = OBJECTIVES.filter((o) => o.is_system);
       const custom = OBJECTIVES.filter((o) => !o.is_system);
       const parts = [];
@@ -1771,16 +1805,6 @@
       }
       list.innerHTML = parts.join("");
     } catch (ex) { errToast(ex, "No se pudo cargar el catálogo de objetivos"); }
-  }
-  /* Recordatorio (Star+) mientras el coach tenga menos de 3 objetivos
-     PERSONALIZADOS (el catálogo de sistema no cuenta). Nunca se muestra en Free. */
-  function updateObjectiveReminder() {
-    const customCount = OBJECTIVES.filter((o) => !o.is_system).length;
-    const show = !!FEATURES?.objectives && customCount < 3;
-    const dash = $("#objReminderDash");
-    if (dash) dash.style.display = show ? "flex" : "none";
-    const ajustes = $("#objReminderSettings");
-    if (ajustes) ajustes.style.display = show ? "flex" : "none";
   }
 
   function wireObjectives() {
