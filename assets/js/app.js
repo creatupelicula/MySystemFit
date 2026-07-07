@@ -1606,20 +1606,37 @@
     $("#refProgressStar")?.classList.toggle("hidden", !isStar);
     $("#refProgressPlus")?.classList.toggle("hidden", !isPlus);
     $("#refMotivFree") && ($("#refMotivFree").style.display = !isStar && !isPlus ? "" : "none");
+    // Star Plus en construcción: las recompensas de referidos que dan acceso a
+    // Star Plus quedan congeladas (los puntos se conservan). El mes gratis de
+    // Star (canje manual, 4 pts) NO se toca — ese plan sí está disponible.
+    const plusBlocked = !!window.msfCheckout?.isPlanBlocked?.("Star Plus");
     if (isStar) {
       $("#refPtsTo4") && ($("#refPtsTo4").textContent = `${Math.min(pts, 4)}/4`);
       $("#refBar4") && ($("#refBar4").style.width = Math.min(100, (pts / 4) * 100) + "%");
-      $("#refPtsTo5") && ($("#refPtsTo5").textContent = `${Math.min(pts, 5)}/5`);
-      $("#refBar5") && ($("#refBar5").style.width = Math.min(100, (pts / 5) * 100) + "%");
       $("#btnRedeemStarMonth")?.classList.toggle("hidden", pts < 4);
-      $("#refMotivStar") && ($("#refMotivStar").textContent = pts >= 4
-        ? "¡Ya puedes canjear tu mes gratis de Star, o sigue sumando: a los 5 puntos subes gratis a Star Plus por un mes!"
-        : `Te faltan ${4 - pts} punto${4 - pts === 1 ? "" : "s"} para tu primer mes gratis de Star.`);
+      // Meta de 5 pts (upgrade a Star Plus): oculta mientras Star Plus esté en construcción.
+      const to5Row = $("#refPtsTo5")?.closest(".row");
+      const to5Bar = $("#refBar5")?.parentElement;
+      to5Row?.classList.toggle("hidden", plusBlocked);
+      to5Bar?.classList.toggle("hidden", plusBlocked);
+      if (!plusBlocked) {
+        $("#refPtsTo5") && ($("#refPtsTo5").textContent = `${Math.min(pts, 5)}/5`);
+        $("#refBar5") && ($("#refBar5").style.width = Math.min(100, (pts / 5) * 100) + "%");
+      }
+      $("#refMotivStar") && ($("#refMotivStar").textContent = plusBlocked
+        ? (pts >= 4
+            ? "¡Ya puedes canjear tu mes gratis de Star! Sigue sumando puntos: pronto habrá más recompensas."
+            : `Te faltan ${4 - pts} punto${4 - pts === 1 ? "" : "s"} para tu primer mes gratis de Star.`)
+        : (pts >= 4
+            ? "¡Ya puedes canjear tu mes gratis de Star, o sigue sumando: a los 5 puntos subes gratis a Star Plus por un mes!"
+            : `Te faltan ${4 - pts} punto${4 - pts === 1 ? "" : "s"} para tu primer mes gratis de Star.`));
     } else if (isPlus) {
       const rem = pts % 4;
       $("#refPtsPlus") && ($("#refPtsPlus").textContent = `${rem}/4`);
       $("#refBarPlus") && ($("#refBarPlus").style.width = Math.min(100, (rem / 4) * 100) + "%");
-      $("#refMotivPlus") && ($("#refMotivPlus").textContent = `Te faltan ${4 - rem} punto${4 - rem === 1 ? "" : "s"} para tu próximo mes gratis de Star Plus (automático).`);
+      $("#refMotivPlus") && ($("#refMotivPlus").textContent = plusBlocked
+        ? "Sigues acumulando puntos por tus referidos. Las recompensas de Star Plus están en construcción; se activarán muy pronto."
+        : `Te faltan ${4 - rem} punto${4 - rem === 1 ? "" : "s"} para tu próximo mes gratis de Star Plus (automático).`);
     } else if (pts > 0) {
       $("#refMotivFree") && ($("#refMotivFree").textContent = `Ya tienes ${pts} punto${pts === 1 ? "" : "s"} de referidos. Mejora a Star o Star Plus para empezar a canjearlos por meses gratis.`);
     }

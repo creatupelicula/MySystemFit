@@ -12,6 +12,12 @@ const PRICE_BY_PLAN = {
   "Star Plus": process.env.STRIPE_PRICE_STAR_PLUS,
 };
 
+// Planes temporalmente EN CONSTRUCCIÓN: no se pueden contratar por checkout ni
+// recibir como premio de referidos hasta terminar sus mejoras. Reactivar =
+// vaciar este Set (debe coincidir con BLOCKED_PLANS de assets/js/checkout-shared.js).
+const BLOCKED_PLANS = new Set(["Star Plus", "Kings"]);
+function isPlanBlocked(plan) { return BLOCKED_PLANS.has(plan); }
+
 function stripe() {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) throw new Error("Falta STRIPE_SECRET_KEY");
@@ -67,4 +73,4 @@ function siteUrl(req) {
   return `${proto}://${host}`;
 }
 
-module.exports = { stripe, admin, userFromToken, coachFromToken, readJson, readRaw, siteUrl, PLAN_BY_PRICE, PRICE_BY_PLAN };
+module.exports = { stripe, admin, userFromToken, coachFromToken, readJson, readRaw, siteUrl, PLAN_BY_PRICE, PRICE_BY_PLAN, BLOCKED_PLANS, isPlanBlocked };

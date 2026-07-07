@@ -1,6 +1,6 @@
 // POST /api/webhook — recibe eventos de Stripe y sincroniza profiles con la suscripción.
 // bodyParser desactivado: Stripe firma el body crudo y hay que verificarlo tal cual.
-const { stripe, admin, readRaw, PLAN_BY_PRICE } = require("./_lib");
+const { stripe, admin, readRaw, PLAN_BY_PRICE, isPlanBlocked } = require("./_lib");
 const { grantSamePlanFreeMonth, grantUpgradeTrialMonth } = require("./_referrals");
 
 // Otorga puntos de referido al REFERENTE cuando el REFERIDO activa un plan de
@@ -25,6 +25,13 @@ async function maybeAwardReferralPoints(db, sk, coachId, newPlan) {
   const { data: rows } = await db.rpc("apply_referral_points", { p_referrer_id: referral.referrer_id, p_points: points });
   const action = rows?.[0]?.action;
   if (action === "none") return;
+  // Premio de referidos CONGELADO: ambas recompensas automáticas dan acceso a
+  // Star Plus (en construcción). Los puntos ya quedaron sumados (apply_referral_points
+  // no descuenta), así que salir aquí SIN otorgar ni descontar los conserva para
+  // cuando el plan reabra — solo hay que quitar isPlanBlocked("Star Plus").
+  if ((action === "auto_star_plus_month" || action === "auto_upgrade_star_plus_month") && isPlanBlocked("Star Plus")) {
+    return;
+  }
   try {
     if (action === "auto_star_plus_month") {
       await grantSamePlanFreeMonth(db, sk, referral.referrer_id, "Star Plus");

@@ -15,8 +15,9 @@
   .sp-head { text-align: center; max-width: 640px; margin: 0 auto 36px; }
   .sp-head h1 { font-family: var(--font-display); font-size: 30px; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 8px; }
   .sp-head p { color: var(--text-2); font-size: 14px; }
-  .sp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 1080px; margin: 0 auto; }
-  @media (max-width: 860px) { .sp-grid { grid-template-columns: 1fr; max-width: 480px; } }
+  .sp-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; max-width: 1240px; margin: 0 auto; }
+  @media (max-width: 1080px) { .sp-grid { grid-template-columns: repeat(2, 1fr); max-width: 720px; } }
+  @media (max-width: 560px) { .sp-grid { grid-template-columns: 1fr; max-width: 420px; } }
   .sp-card {
     position: relative; display: flex; flex-direction: column; padding: 28px 24px;
     border-radius: var(--r-lg); border: 1px solid var(--border); background: var(--surface);
@@ -38,6 +39,8 @@
   .sp-benefits li.sp-on svg { color: var(--lime); }
   .sp-benefits li.sp-off svg { color: var(--text-3); }
   .sp-cta { width: 100%; }
+  .sp-benefits li.sp-ai { font-weight: 700; color: var(--text-1); }
+  .sp-benefits li.sp-ai svg { color: var(--indigo-hi, #7c8cff); }
   .sp-card--soon { opacity: 0.7; }
   .sp-card--soon:hover { transform: none; border-color: var(--border); box-shadow: none; }
   .sp-badge--soon { background: var(--surface-3, #26262e); color: var(--text-2); }
@@ -120,6 +123,7 @@
     { key: "Free", cta: "Empezar gratis", ctaClass: "btn--ghost" },
     { key: "Star", cta: "Elegir Star", ctaClass: "btn--primary" },
     { key: "Star Plus", cta: "Elegir Star Plus", ctaClass: "btn--primary" },
+    { key: "Kings", cta: "Elegir Kings", ctaClass: "btn--primary" },
   ].map((p) => p.key === recommended ? { ...p, featured: true, badge: "Recomendado para ti", ctaClass: "btn--primary" } : p);
 
   $("#spGrid").innerHTML = PLANS.map((p) => {
@@ -128,14 +132,22 @@
     const benefits = Object.keys(FEATURE_LABEL).map((k) =>
       `<li class="${features[k] ? "sp-on" : "sp-off"}">${features[k] ? okIco : noIco}${FEATURE_LABEL[k]}</li>`
     ).join("");
+    // Kings es el plan de IA: su beneficio distintivo va destacado arriba.
+    const aiBenefit = p.key === "Kings" ? `<li class="sp-on sp-ai">${okIco}Inteligencia artificial (IA) para tu coaching</li>` : "";
+    // Kings aún no tiene precio (en construcción): se muestra "Próximamente".
+    const price = api.planPrice(p.key);
+    const priceHtml = price
+      ? `<span class="sp-price__amount">${price}</span>${p.key !== "Free" ? `<span class="sp-price__period">/mes</span>` : ""}`
+      : `<span class="sp-price__amount" style="font-size:22px">Próximamente</span>`;
     return `
       <div class="sp-card ${blocked ? "sp-card--soon" : (p.featured ? "sp-card--featured" : "")}">
         ${blocked ? `<div class="sp-badge sp-badge--soon">🚧 En construcción</div>` : (p.badge ? `<div class="sp-badge">${p.badge}</div>` : "")}
         <div class="sp-name">${p.key}</div>
-        <div class="sp-price"><span class="sp-price__amount">${api.planPrice(p.key)}</span>${p.key !== "Free" ? `<span class="sp-price__period">/mes</span>` : ""}</div>
+        <div class="sp-price">${priceHtml}</div>
         <div class="sp-limit">Hasta ${api.planLimit(p.key)} alumnos</div>
         <ul class="sp-benefits">
           <li class="sp-on">${okIco}Alumnos, pagos y referidos</li>
+          ${aiBenefit}
           ${benefits}
         </ul>
         ${blocked
