@@ -162,7 +162,16 @@
               <div>
                 <h3>Ingresos</h3>
                 <div class="chart-total mono text-gradient">$0</div>
+                <div class="t3 text-sm" id="revenueAvg"></div>
               </div>
+            </div>
+            <div class="row gap-2 wrap mb-4" id="revenuePeriods">
+              <button class="pill" data-period="today">Hoy</button>
+              <button class="pill" data-period="yesterday">Ayer</button>
+              <button class="pill" data-period="7d">7 días</button>
+              <button class="pill" data-period="3m">3 meses</button>
+              <button class="pill" data-period="6m">6 meses</button>
+              <button class="pill is-active" data-period="1y">1 año</button>
             </div>
             <div class="chart-wrap" id="revenueChartWrap" data-chart-values="">
               <svg class="chart-svg" viewBox="0 0 640 240" preserveAspectRatio="none">

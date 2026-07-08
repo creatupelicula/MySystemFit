@@ -874,13 +874,17 @@
     const dot = wrap.querySelector(".chart-hover-dot");
     const tip = wrap.querySelector(".chart-tooltip");
     if (!dot || !tip || !values.length) return;
-    const min = Math.min(...values), max = Math.max(...values);
     wrap.addEventListener("mousemove", (e) => {
+      // Lee los valores en vivo del dataset: el gráfico de ingresos cambia de
+      // serie al elegir otro periodo, así que el tooltip debe reflejarlo.
+      const live = wrap.dataset.chartValues ? wrap.dataset.chartValues.split(",").map(Number) : values;
+      if (!live.length) return;
+      const min = Math.min(...live), max = Math.max(...live);
       const rect = wrap.getBoundingClientRect();
       const pct = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1);
-      const idx = Math.round(pct * (values.length - 1));
-      const val = values[idx];
-      const xPct = (idx / (values.length - 1)) * 100;
+      const idx = Math.round(pct * (live.length - 1));
+      const val = live[idx];
+      const xPct = live.length > 1 ? (idx / (live.length - 1)) * 100 : 50;
       const norm = max === min ? 0.5 : (val - min) / (max - min);
       const yPct = 78 - norm * 56;
       dot.style.left = xPct + "%";
@@ -1367,15 +1371,32 @@
     $("#finOverdue") && ($("#finOverdue").textContent = money(fin.overdueAmount));
     $("#finTicket") && ($("#finTicket").textContent = money(fin.avgTicket));
 
-    // Gráfico de ingresos del dashboard con los cobros reales de 12 meses
+    // Gráfico de ingresos del dashboard según el periodo seleccionado.
+    renderRevenueChart();
+  }
+
+  // Periodo activo del gráfico de ingresos (default = último año, como antes).
+  let revenuePeriod = "1y";
+  const PERIOD_SUBTITLE = {
+    today: "Cobros de hoy", yesterday: "Cobros de ayer", "7d": "Cobros · últimos 7 días",
+    "3m": "Cobros · últimos 3 meses", "6m": "Cobros · últimos 6 meses", "1y": "Cobros reales · últimos 12 meses",
+  };
+  function renderRevenueChart() {
     const wrap = $("#revenueChartWrap");
     if (!wrap) return;
-    const values = fin.monthly.map((m) => m.total);
+    const data = api.financeByPeriod(PAYMENTS, revenuePeriod);
+    const values = data.series.map((m) => m.total);
     wrap.dataset.chartValues = values.join(",");
-    const totalEl = wrap.closest(".chart-card")?.querySelector(".chart-total");
-    if (totalEl) totalEl.textContent = money(fin.collectedMonth);
+    const card = wrap.closest(".chart-card");
+    const totalEl = card?.querySelector(".chart-total");
+    if (totalEl) totalEl.textContent = money(data.total);
+    const avgEl = $("#revenueAvg");
+    if (avgEl) avgEl.textContent = data.count
+      ? `${data.count} cobro${data.count === 1 ? "" : "s"} · promedio ${money(data.avg)}`
+      : "Sin cobros en este periodo";
     const max = Math.max(...values, 1);
-    const pts = values.map((v, i) => [Math.round(i * (640 / (values.length - 1))), Math.round(200 - (v / max) * 160)]);
+    const denom = values.length > 1 ? values.length - 1 : 1;
+    const pts = values.map((v, i) => [Math.round(i * (640 / denom)), Math.round(200 - (v / max) * 160)]);
     const line = "M" + pts.map((p) => p.join(",")).join(" L");
     const svg = wrap.querySelector(".chart-svg");
     if (svg) {
@@ -1385,11 +1406,19 @@
       const dot = svg.querySelector("circle.chart-dot-indigo");
       if (dot && pts.length) { dot.setAttribute("cx", pts[pts.length - 1][0]); dot.setAttribute("cy", pts[pts.length - 1][1]); }
     }
-    const legend = wrap.closest(".chart-card")?.querySelector(".chart-legend span:first-child");
-    if (legend) legend.innerHTML = `<i style="background:var(--indigo)"></i>Ingresos ${new Date().getFullYear()}`;
-    const updated = wrap.closest(".chart-card")?.querySelector(".chart-legend .t3");
-    if (updated) updated.textContent = "Cobros reales · últimos 12 meses";
+    const legend = card?.querySelector(".chart-legend span:first-child");
+    if (legend) legend.innerHTML = `<i style="background:var(--indigo)"></i>Ingresos`;
+    const updated = card?.querySelector(".chart-legend .t3");
+    if (updated) updated.textContent = PERIOD_SUBTITLE[revenuePeriod] || "";
   }
+  $("#revenuePeriods")?.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-period]");
+    if (!b) return;
+    $$("#revenuePeriods .pill").forEach((p) => p.classList.remove("is-active"));
+    b.classList.add("is-active");
+    revenuePeriod = b.dataset.period;
+    renderRevenueChart();
+  });
 
   /* ---------- Gating por plan (sistema central de permisos) ---------- */
   const lockSvg = '<svg viewBox="0 0 24 24" width="13" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:auto;opacity:.6"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';

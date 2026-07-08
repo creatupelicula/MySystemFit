@@ -495,6 +495,54 @@ window.msfApi = (function () {
     };
   }
 
+  /* Ingresos cobrados agregados por periodo, para el dashboard con filtros
+     rápidos (hoy/ayer/7d/3m/6m/1año). Devuelve total, nº de cobros, promedio
+     por cobro y una serie de buckets para dibujar la gráfica. "1y" equivale a
+     los últimos 12 meses (comportamiento por defecto histórico). */
+  function financeByPeriod(payments, period) {
+    const paid = (payments || []).filter((p) => p.state === "ok" && p.paid_at);
+    const now = new Date();
+    const sum = (arr) => arr.reduce((s, p) => s + Number(p.amount), 0);
+    const inRange = (a, b) => paid.filter((p) => { const t = new Date(p.paid_at); return t >= a && t < b; });
+    const d0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const buckets = [];
+    if (period === "today" || period === "yesterday") {
+      const base = new Date(d0); if (period === "yesterday") base.setDate(base.getDate() - 1);
+      for (let h = 0; h < 24; h++) {
+        const a = new Date(base); a.setHours(h, 0, 0, 0);
+        const b = new Date(base); b.setHours(h + 1, 0, 0, 0);
+        buckets.push({ label: h % 6 === 0 ? h + "h" : "", items: inRange(a, b) });
+      }
+    } else if (period === "7d") {
+      for (let i = 6; i >= 0; i--) {
+        const a = new Date(d0); a.setDate(a.getDate() - i);
+        const b = new Date(a); b.setDate(b.getDate() + 1);
+        buckets.push({ label: a.toLocaleDateString("es-MX", { weekday: "short" }), items: inRange(a, b) });
+      }
+    } else if (period === "3m") {
+      const startW = new Date(d0); startW.setDate(startW.getDate() - 12 * 7);
+      for (let i = 0; i < 13; i++) {
+        const a = new Date(startW); a.setDate(a.getDate() + i * 7);
+        const b = new Date(a); b.setDate(b.getDate() + 7);
+        buckets.push({ label: i % 3 === 0 ? a.toLocaleDateString("es-MX", { day: "2-digit", month: "short" }) : "", items: inRange(a, b) });
+      }
+    } else {
+      const n = period === "6m" ? 6 : 12;
+      for (let i = n - 1; i >= 0; i--) {
+        const a = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const b = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+        buckets.push({ label: a.toLocaleDateString("es-MX", { month: "short" }), items: inRange(a, b) });
+      }
+    }
+    const all = buckets.reduce((acc, x) => acc.concat(x.items), []);
+    const total = sum(all);
+    return {
+      total, count: all.length,
+      avg: all.length ? Math.round(total / all.length) : 0,
+      series: buckets.map((x) => ({ label: x.label, total: sum(x.items) })),
+    };
+  }
+
   /* ---------- Community ---------- */
   async function listCommunityPosts(coachId) {
     const { data, error } = await sb()
@@ -573,6 +621,7 @@ window.msfApi = (function () {
     listCatalogAndCustom, listSystemObjectives, getCatalogObjective, setCatalogObjective,
     listStudentObjectives, assignObjective, unassignObjective, setObjectiveStatus,
     financeKpis,
+    financeByPeriod,
     listStudents, createStudent, createStudentFull, updateStudent, deleteStudent,
     listStudentNotifications,
     listPayments, markPaymentPaid, createPayment,
