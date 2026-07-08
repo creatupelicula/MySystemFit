@@ -14,7 +14,7 @@
   let PAYMENTS = [];
   let FOLLOW_UPS = [];
   let CURRENT_STUDENT_ID = null; // alumno activo en drawer / builder de rutinas
-  let studentFilter = { text: "", type: "all", state: "all" };
+  let studentFilter = { text: "", type: "all", state: "all", groupBy: false, goalText: "" };
 
   // Estados de PAGOS (ok/pend/late) — no confundir con estados del alumno
   const badgeClass = { ok: "badge--ok", pend: "badge--pend", late: "badge--late" };
@@ -210,11 +210,8 @@
     return STUDENTS.filter((s) => {
       if (studentFilter.text && !s.full_name.toLowerCase().includes(studentFilter.text.toLowerCase())) return false;
       if (studentFilter.type !== "all" && s.training_type !== studentFilter.type) return false;
-      if (studentFilter.state === "late") {
-        // "Atrasados" = alumnos con algún pago vencido sin cobrar
-        const now = new Date(new Date().toDateString());
-        if (!PAYMENTS.some((p) => p.student_id === s.id && p.state !== "ok" && new Date(p.due_date) < now)) return false;
-      } else if (studentFilter.state !== "all" && s.display_state !== studentFilter.state) return false;
+      // Los estados de pago (atrasados) se gestionan en Dashboard y Pagos, no aquí.
+      if (studentFilter.state !== "all" && s.display_state !== studentFilter.state) return false;
       return true;
     });
   }
@@ -227,7 +224,48 @@
     if (days <= 3) return { text: `En ${days} días`, tone: "amber" };
     return { text: new Date(p.due_date).toLocaleDateString("es-MX", { day: "2-digit", month: "short" }), tone: "t3" };
   }
+  function studentCardHtml(s) {
+    const due = dueLabel(s);
+    return `
+      <div class="card card--hover student-card" data-student="${s.id}" style="cursor:pointer">
+        <div class="student-card__head"><div class="avatar avatar--md">${s.initials}</div><div><div class="student-card__name">${api.esc(s.full_name)}</div><div class="student-card__sub">${s.age ? s.age + " años · " : ""}${api.esc(s.training_type)}</div></div></div>
+        <div style="margin-bottom:12px"><span class="badge ${sBadge(s.display_state)}">${sLabel(s.display_state)}</span></div>
+        <div class="student-card__rows">
+          <div class="kv"><span>Objetivo</span><span>${api.esc(s.goal || "—")}</span></div>
+          <div class="kv"><span>Próximo pago</span><span style="color:var(--${due.tone === "t3" ? "text-2" : due.tone})">${due.text}</span></div>
+        </div>
+        <div class="student-card__foot"><button class="btn btn--ghost btn--sm js-msg-student" data-student="${s.id}" style="flex:1">Mensaje</button><button class="btn btn--primary btn--sm js-open-student" style="flex:1">Ver ficha</button></div>
+      </div>`;
+  }
+  // Vista agrupada por objetivo: cambia SOLO la visualización dentro del filtro
+  // "Objetivo". Agrupa a los alumnos por su objetivo, con buscador por nombre.
+  function renderStudentsByGoal() {
+    const wrap = $("#studentsByGoal");
+    if (!wrap) return;
+    const q = (studentFilter.goalText || "").trim().toLowerCase();
+    const groups = {};
+    filteredStudents().forEach((s) => {
+      const goal = (s.goal || "").trim() || "Sin objetivo";
+      if (q && !goal.toLowerCase().includes(q)) return;
+      (groups[goal] = groups[goal] || []).push(s);
+    });
+    const names = Object.keys(groups).sort((a, b) => a.localeCompare(b, "es"));
+    wrap.innerHTML = names.map((g) => `
+      <div class="obj-group">
+        <div class="section-title text-sm" style="margin:16px 0 8px">${api.esc(g)} <span class="t3">· ${groups[g].length}</span></div>
+        <div class="grid-cards">${groups[g].map(studentCardHtml).join("")}</div>
+      </div>`).join("") || `<p class="t3 text-sm" style="padding:20px;text-align:center">Sin alumnos que coincidan.</p>`;
+  }
   function renderStudents() {
+    // Modo agrupado por objetivo: oculta tabla/tarjetas normales y el toggle.
+    const byGoal = $("#studentsByGoal");
+    const grouped = studentFilter.groupBy;
+    $("#studentsTable")?.classList.toggle("hidden", grouped);
+    $("#studentsCards")?.classList.toggle("hidden", grouped);
+    $("#viewToggle")?.classList.toggle("hidden", grouped);
+    byGoal?.classList.toggle("hidden", !grouped);
+    $("#objSearch")?.classList.toggle("hidden", !grouped);
+    if (grouped) { renderStudentsByGoal(); return; }
     const list = filteredStudents();
     const tbody = $("#studentsTbody");
     const cards = $("#studentsCards");
@@ -304,8 +342,9 @@
   function renderFollowUps() {
     const wrap = $("#followUpsList");
     if (!wrap) return;
-    wrap.innerHTML = FOLLOW_UPS.map((f) => `
-      <div class="alert-item ${f.is_done ? "is-done" : ""}" data-followup="${f.id}">
+    // Las tareas completadas salen de la lista activa (quedan en la BD como historial).
+    wrap.innerHTML = FOLLOW_UPS.filter((f) => !f.is_done).map((f) => `
+      <div class="alert-item" data-followup="${f.id}">
         <span class="check js-check ${f.is_done ? "is-done" : ""}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
         <div><div class="alert-item__txt">${api.esc(f.title)}</div><div class="alert-item__sub">${api.esc(f.subtitle || (f.students ? f.students.full_name : ""))}</div></div>
         <span class="alert-item__time">${new Date(f.due_at).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}</span>
@@ -334,12 +373,18 @@
       arr.forEach((p) => p.classList.remove("is-active"));
       pill.classList.add("is-active");
       const txt = pill.textContent.trim();
-      const map = { "Todos": ["all", "all"], "Online": ["Online", "all"], "Presencial": ["Presencial", "all"], "Activos": ["all", "activo"], "Sin iniciar sesión": ["all", "sin_iniciar_sesion"], "Suspendidos": ["all", "suspendido"], "Atrasados": ["all", "late"] };
+      studentFilter.groupBy = txt.includes("Objetivo");
+      const map = { "Todos": ["all", "all"], "Online": ["Online", "all"], "Presencial": ["Presencial", "all"], "Activos": ["all", "activo"], "Sin iniciar sesión": ["all", "sin_iniciar_sesion"], "Suspendidos": ["all", "suspendido"] };
       const key = Object.keys(map).find((k) => txt.includes(k)) || "Todos";
       studentFilter.type = map[key][0];
       studentFilter.state = map[key][1];
       renderStudents();
     });
+  });
+
+  $("#objSearch")?.addEventListener("input", (e) => {
+    studentFilter.goalText = e.target.value;
+    renderStudentsByGoal();
   });
 
   /* ---------- Drawer ficha alumno ---------- */
@@ -730,6 +775,8 @@
       await api.toggleFollowUp(id, nowDone);
       const f = FOLLOW_UPS.find((x) => x.id === id);
       if (f) f.is_done = nowDone;
+      // Al completarla desaparece de la lista activa (pequeña pausa para ver el check).
+      if (nowDone) setTimeout(renderFollowUps, 260);
       renderNotifications();
     } catch (ex) { errToast(ex, "No se pudo actualizar el seguimiento"); }
   });
