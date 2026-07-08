@@ -807,6 +807,10 @@
     $("#aSettingsName") && ($("#aSettingsName").textContent = PROFILE?.full_name || "—");
     $("#aSettingsCoach") && ($("#aSettingsCoach").textContent = COACH_NAME || "—");
     $("#aSettingsPlan") && ($("#aSettingsPlan").textContent = COACH_FEATURES.objectives ? "Tu coach tiene funciones premium activas" : "Plan básico");
+    // #2 Celular precargado desde la cuenta (que se sincroniza con la ficha del
+    // coach vía triggers). El alumno puede confirmarlo o editarlo.
+    const phoneInput = $("#aPhone");
+    if (phoneInput && document.activeElement !== phoneInput) phoneInput.value = PROFILE?.phone || "";
     const soundToggle = $("#aSoundToggle");
     if (soundToggle) soundToggle.checked = window.msfSound ? window.msfSound.isEnabled() : true;
     const chipsWrap = $("#aObjectiveChips");
@@ -841,6 +845,24 @@
     if (e.target.id !== "aSoundToggle") return;
     window.msfSound?.setEnabled?.(e.target.checked);
     if (e.target.checked) window.msfSound?.playSound?.("click");
+  });
+  // #2 Guardar celular: actualiza profiles.phone; el trigger lo sincroniza con
+  // la ficha del alumno en el panel del coach (students.phone) al instante.
+  document.addEventListener("click", async (e) => {
+    if (!e.target.closest("#aPhoneSave")) return;
+    const btn = e.target.closest("#aPhoneSave");
+    const val = ($("#aPhone")?.value || "").trim();
+    btn.disabled = true;
+    try {
+      const { error } = await window.msfSupabase.from("profiles").update({ phone: val || null }).eq("id", PROFILE.id);
+      if (error) throw error;
+      PROFILE.phone = val || null;
+      $("#aPhoneHint") && ($("#aPhoneHint").textContent = "Celular actualizado ✓");
+      window.msfSound?.playSound?.("click");
+    } catch (ex) {
+      console.error("No se pudo guardar el celular:", ex);
+      $("#aPhoneHint") && ($("#aPhoneHint").textContent = "No se pudo guardar, intenta de nuevo.");
+    } finally { btn.disabled = false; }
   });
 
   /* ---------- Onboarding inicial (una sola vez) ----------
