@@ -1946,6 +1946,11 @@
       .on("postgres_changes", { event: "*", schema: "public", table: "attendance", filter: `coach_id=eq.${PROFILE.id}` }, () => {
         renderAttendanceToday();
       })
+      // #1 Alumno cambia su objetivo/datos (students.goal, etc.) → refresca
+      // tarjetas, dashboard y estadísticas del coach al instante.
+      .on("postgres_changes", { event: "*", schema: "public", table: "students", filter: `coach_id=eq.${PROFILE.id}` }, async () => {
+        try { STUDENTS = await api.listStudents(PROFILE.id); renderStudents(); updateKpis(); } catch (_) {}
+      })
       // Notificaciones (ej. alumno cambió su objetivo) — llegan sin recargar
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `coach_id=eq.${PROFILE.id}` }, (payload) => {
         // Solo notificaciones dirigidas al coach (las del alumno comparten coach_id).

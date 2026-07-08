@@ -894,7 +894,16 @@
         // manual (mismo patrón que peso/altura/edad, más abajo).
         if (STUDENT.goal) {
           const match = choicesBox.querySelector(`[data-value="${CSS.escape(STUDENT.goal)}"]`);
-          if (match) { match.classList.add("sel"); answers.goal = STUDENT.goal; }
+          if (match) {
+            match.classList.add("sel"); answers.goal = STUDENT.goal;
+            // #1 Mensaje: el coach preseleccionó este objetivo; el alumno puede
+            // confirmarlo o cambiarlo tocando otra opción.
+            const msg = $("#obCoachGoalMsg");
+            if (msg) {
+              msg.textContent = `Tu coach seleccionó "${STUDENT.goal}" para ayudarte a comenzar. ¿Estás de acuerdo o deseas cambiarlo? Puedes tocar otra opción para cambiarlo.`;
+              msg.classList.remove("hidden");
+            }
+          }
         }
       } else { goalIsFree = true; }
     } catch (_) { goalIsFree = true; }
