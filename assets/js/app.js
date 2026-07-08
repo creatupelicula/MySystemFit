@@ -1915,6 +1915,8 @@
       })
       // Notificaciones (ej. alumno cambió su objetivo) — llegan sin recargar
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `coach_id=eq.${PROFILE.id}` }, (payload) => {
+        // Solo notificaciones dirigidas al coach (las del alumno comparten coach_id).
+        if (payload.new?.recipient && payload.new.recipient !== "coach") return;
         DB_NOTIFICATIONS = [payload.new, ...DB_NOTIFICATIONS];
         renderNotifications();
         window.msfSound?.playSound?.("notify");

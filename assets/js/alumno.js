@@ -875,7 +875,7 @@
 
     const answers = {};
     let step = 1;
-    const TOTAL = 9;
+    const TOTAL = 10;
     const stepEl = (n) => overlay.querySelector(`.ob-step[data-step="${n}"]`);
     const bar = $("#obBar"), stepNum = $("#obStepNum"),
           backBtn = $("#obBack"), nextBtn = $("#obNext"), errEl = $("#obError");
@@ -960,6 +960,10 @@
       if (step === 7 && !answers.experience_level) return fail("Elige tu nivel de experiencia.");
       if (step === 8 && !answers.training_frequency) return fail("Elige cuántos días quieres entrenar.");
       // paso 9 es opcional
+      if (step === 10) {
+        const v = api.parseMoneyMXN($("#obPayAmount").value);
+        if (!(v > 0)) return fail("Escribe cuánto le pagaste a tu coach.");
+      }
       return true;
     }
     async function finish() {
@@ -985,6 +989,9 @@
         STUDENT.height = parseFloat($("#obHeight").value);
         STUDENT.weight_current = parseFloat($("#obWeightCurrent").value);
         STUDENT.weight_goal = parseFloat($("#obWeightGoal").value);
+        // #6 Registra el primer pago que el alumno declara haberle hecho al coach.
+        const payAmt = api.parseMoneyMXN($("#obPayAmount").value);
+        if (payAmt > 0) { try { await api.recordOnboardingPayment(payAmt); } catch (ex) { console.error("No se pudo registrar el pago inicial:", ex); } }
         overlay.classList.add("hidden");
         paintHome();
         loadMyObjectives();

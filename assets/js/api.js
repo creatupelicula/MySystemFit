@@ -207,6 +207,14 @@ window.msfApi = (function () {
     return data;
   }
 
+  // #6 El alumno registra en su onboarding cuánto le pagó al coach → crea el
+  // primer pago (ya cobrado) y notifica al coach. Vía RPC porque el alumno no
+  // puede insertar en payments directamente (RLS).
+  async function recordOnboardingPayment(amount) {
+    const { error } = await sb().rpc("record_onboarding_payment", { p_amount: amount });
+    if (error) throw error;
+  }
+
   // #12 Preferencias visuales guardadas en la cuenta (no solo en el
   // dispositivo): se sincronizan al iniciar sesión en cualquier dispositivo.
   async function saveThemePrefs(prefs) {
@@ -620,13 +628,13 @@ window.msfApi = (function () {
   /* ---------- Notificaciones ---------- */
   async function listNotifications(coachId) {
     const { data, error } = await sb().from("notifications")
-      .select("*").eq("coach_id", coachId).order("created_at", { ascending: false }).limit(30);
+      .select("*").eq("coach_id", coachId).eq("recipient", "coach").order("created_at", { ascending: false }).limit(30);
     if (error) throw error;
     return data || [];
   }
   async function listStudentNotifications(studentId) {
     const { data, error } = await sb().from("notifications")
-      .select("*").eq("student_id", studentId).order("created_at", { ascending: false }).limit(30);
+      .select("*").eq("student_id", studentId).eq("recipient", "student").order("created_at", { ascending: false }).limit(30);
     if (error) throw error;
     return data || [];
   }
@@ -650,7 +658,7 @@ window.msfApi = (function () {
     listStudents, createStudent, createStudentFull, updateStudent, deleteStudent,
     listStudentNotifications,
     listPayments, markPaymentPaid, createPayment, updatePayment,
-    saveThemePrefs,
+    saveThemePrefs, recordOnboardingPayment,
     getStudentRoutine, createRoutine, saveRoutineDay,
     listFollowUps, toggleFollowUp, createFollowUp,
     listWeightLogs, addWeightLog,

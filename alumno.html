@@ -320,7 +320,7 @@
       <div class="brand__name">MySystem<span class="text-gradient">Fit</span></div>
     </div>
     <div class="ob-progress"><div class="ob-progress__bar" id="obBar"></div></div>
-    <div class="ob-step-count"><span id="obStepNum">1</span> / <span id="obTotal">9</span></div>
+    <div class="ob-step-count"><span id="obStepNum">1</span> / <span id="obTotal">10</span></div>
 
     <!-- 1. Objetivo (catálogo del coach o respuesta libre) -->
     <div class="ob-step active" data-step="1">
@@ -399,6 +399,12 @@
       <div class="field"><textarea class="input" id="obInjuries" style="min-height:70px;resize:vertical" placeholder="Ej. molestia en rodilla, hernia lumbar… o escribe 'Ninguna'"></textarea></div>
       <div class="field"><label for="obTargetDate">¿Para cuándo quieres lograrlo? (opcional)</label><input class="input" type="date" id="obTargetDate"></div>
       <div class="field"><label for="obMotivation">¿Qué te motiva? (opcional)</label><textarea class="input" id="obMotivation" style="min-height:70px;resize:vertical" placeholder="Ej. verme bien en mi boda, tener más energía…"></textarea></div>
+    </div>
+
+    <div class="ob-step" data-step="10">
+      <div class="ob-q">¿Cuánto le pagaste a tu coach?</div>
+      <div class="ob-hint">Registramos tu primer pago para que tu coach lleve el control. Escribe el monto en pesos (MXN).</div>
+      <div class="field"><div class="row gap-3" style="align-items:center"><input class="input" type="text" inputmode="decimal" id="obPayAmount" placeholder="1,000.00" style="flex:1"><span class="t3 text-sm" style="white-space:nowrap">MXN</span></div></div>
     </div>
 
     <div class="ob-err" id="obError"></div>
