@@ -19,12 +19,33 @@
   // Estados de PAGOS (ok/pend/late) — no confundir con estados del alumno
   const badgeClass = { ok: "badge--ok", pend: "badge--pend", late: "badge--late" };
   const stateLabel = { ok: "Activa", pend: "Pendiente", late: "Atrasada" };
-  // Estado visible del alumno (100% calculado en la BD, ver display_state en
-  // students_with_state): activo / suspendido / sin_iniciar_sesion.
-  const S_BADGE = { activo: "badge--ok", suspendido: "badge--late", sin_iniciar_sesion: "badge--pend" };
-  const S_LABEL = { activo: "Activo", suspendido: "Suspendido", sin_iniciar_sesion: "Sin iniciar sesión" };
+  // Estado visible del alumno. Base de actividad calculada en la BD
+  // (display_state en students_with_state: activo/suspendido/sin_iniciar_sesion)
+  // y encima el estado por vencimiento de pago (ver studentState).
+  const S_BADGE = { activo: "badge--ok", por_vencer: "badge--pend", ultimo_dia: "badge--late", suspendido: "badge--late", sin_iniciar_sesion: "badge--indigo" };
+  const S_LABEL = { activo: "Activo", por_vencer: "Próximo a vencer", ultimo_dia: "Último día", suspendido: "Suspendido", sin_iniciar_sesion: "Sin iniciar sesión" };
   const sBadge = (st) => S_BADGE[st] || "badge--pend";
   const sLabel = (st) => S_LABEL[st] || "Sin iniciar sesión";
+  // #9 Estado automático por vencimiento del pago pendiente más próximo,
+  // reconciliado con el estado de actividad. Si nunca inició sesión, esa señal
+  // manda (sin_iniciar_sesion); si no, se deriva de los días al vencimiento:
+  //   sin pago pendiente o faltan >7 días -> activo
+  //   faltan 2-7 días  -> Próximo a vencer
+  //   falta 0-1 día    -> Último día
+  //   vencido          -> Suspendido
+  function studentState(s) {
+    if (s.display_state === "sin_iniciar_sesion") return "sin_iniciar_sesion";
+    const now = new Date(new Date().toDateString());
+    const pend = PAYMENTS
+      .filter((p) => p.student_id === s.id && p.state !== "ok")
+      .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))[0];
+    if (!pend) return "activo";
+    const days = Math.ceil((new Date(pend.due_date) - now) / 86400000);
+    if (days < 0) return "suspendido";
+    if (days <= 1) return "ultimo_dia";
+    if (days <= 7) return "por_vencer";
+    return "activo";
+  }
 
   /* Máscara de moneda MXN en vivo: agrega comas de miles mientras se
      escribe y limita a 2 decimales tras un punto. Las comas que el usuario
@@ -210,8 +231,12 @@
     return STUDENTS.filter((s) => {
       if (studentFilter.text && !s.full_name.toLowerCase().includes(studentFilter.text.toLowerCase())) return false;
       if (studentFilter.type !== "all" && s.training_type !== studentFilter.type) return false;
-      // Los estados de pago (atrasados) se gestionan en Dashboard y Pagos, no aquí.
-      if (studentFilter.state !== "all" && s.display_state !== studentFilter.state) return false;
+      if (studentFilter.state !== "all") {
+        const st = studentState(s);
+        // "Por vencer" agrupa Próximo a vencer + Último día.
+        if (studentFilter.state === "por_vencer") { if (st !== "por_vencer" && st !== "ultimo_dia") return false; }
+        else if (st !== studentFilter.state) return false;
+      }
       return true;
     });
   }
@@ -229,7 +254,7 @@
     return `
       <div class="card card--hover student-card" data-student="${s.id}" style="cursor:pointer">
         <div class="student-card__head"><div class="avatar avatar--md">${s.initials}</div><div><div class="student-card__name">${api.esc(s.full_name)}</div><div class="student-card__sub">${s.age ? s.age + " años · " : ""}${api.esc(s.training_type)}</div></div></div>
-        <div style="margin-bottom:12px"><span class="badge ${sBadge(s.display_state)}">${sLabel(s.display_state)}</span></div>
+        <div style="margin-bottom:12px"><span class="badge ${sBadge(studentState(s))}">${sLabel(studentState(s))}</span></div>
         <div class="student-card__rows">
           <div class="kv"><span>Objetivo</span><span>${api.esc(s.goal || "—")}</span></div>
           <div class="kv"><span>Próximo pago</span><span style="color:var(--${due.tone === "t3" ? "text-2" : due.tone})">${due.text}</span></div>
@@ -274,7 +299,7 @@
       return `
       <tr data-student="${s.id}" style="cursor:pointer">
         <td><div class="cell-user"><div class="avatar avatar--sm">${s.initials}</div><div><div class="cell-user__name">${api.esc(s.full_name)}</div><div class="cell-user__sub">${s.age ? s.age + " años" : "—"}</div></div></div></td>
-        <td><span class="badge ${sBadge(s.display_state)}">${sLabel(s.display_state)}</span></td>
+        <td><span class="badge ${sBadge(studentState(s))}">${sLabel(studentState(s))}</span></td>
         <td>${api.esc(s.training_type)}</td>
         <td class="muted">${api.esc(s.goal || "—")}</td>
         <td><span style="color:var(--${due.tone === "t3" ? "text-3" : due.tone});font-family:var(--font-mono);font-size:13px">${due.text}</span></td>
@@ -291,7 +316,7 @@
       return `
       <div class="card card--hover student-card" data-student="${s.id}" style="cursor:pointer">
         <div class="student-card__head"><div class="avatar avatar--md">${s.initials}</div><div><div class="student-card__name">${api.esc(s.full_name)}</div><div class="student-card__sub">${s.age ? s.age + " años · " : ""}${api.esc(s.training_type)}</div></div></div>
-        <div style="margin-bottom:12px"><span class="badge ${sBadge(s.display_state)}">${sLabel(s.display_state)}</span></div>
+        <div style="margin-bottom:12px"><span class="badge ${sBadge(studentState(s))}">${sLabel(studentState(s))}</span></div>
         <div class="student-card__rows">
           <div class="kv"><span>Objetivo</span><span>${api.esc(s.goal || "—")}</span></div>
           <div class="kv"><span>Próximo pago</span><span style="color:var(--${due.tone === "t3" ? "text-2" : due.tone})">${due.text}</span></div>
@@ -302,7 +327,7 @@
 
     const headP = $("#view-alumnos .page-head p");
     if (headP) {
-      const active = STUDENTS.filter((s) => s.display_state === "activo").length;
+      const active = STUDENTS.filter((s) => !["suspendido", "sin_iniciar_sesion"].includes(studentState(s))).length;
       const pend = new Set(PAYMENTS.filter((p) => p.state !== "ok").map((p) => p.student_id)).size;
       headP.textContent = `${active} activos · ${pend} pendientes de pago · ${STUDENTS.length} total`;
     }
@@ -368,13 +393,13 @@
     if (e.target.value && !$("#view-alumnos").classList.contains("is-active")) goTo("alumnos");
     renderStudents();
   });
-  $$(".row.gap-2.wrap.mb-4 .pill").forEach((pill, idx, arr) => {
+  $$("#view-alumnos .row.gap-2.wrap.mb-4 .pill").forEach((pill, idx, arr) => {
     pill.addEventListener("click", () => {
       arr.forEach((p) => p.classList.remove("is-active"));
       pill.classList.add("is-active");
       const txt = pill.textContent.trim();
       studentFilter.groupBy = txt.includes("Objetivo");
-      const map = { "Todos": ["all", "all"], "Online": ["Online", "all"], "Presencial": ["Presencial", "all"], "Activos": ["all", "activo"], "Sin iniciar sesión": ["all", "sin_iniciar_sesion"], "Suspendidos": ["all", "suspendido"] };
+      const map = { "Todos": ["all", "all"], "Online": ["Online", "all"], "Presencial": ["Presencial", "all"], "Activos": ["all", "activo"], "Sin iniciar sesión": ["all", "sin_iniciar_sesion"], "Por vencer": ["all", "por_vencer"], "Suspendidos": ["all", "suspendido"] };
       const key = Object.keys(map).find((k) => txt.includes(k)) || "Todos";
       studentFilter.type = map[key][0];
       studentFilter.state = map[key][1];
@@ -399,8 +424,8 @@
     $("#dwAvatar").textContent = s.initials;
     $("#dwName").textContent = s.full_name;
     const st = $("#dwState");
-    st.className = "badge " + sBadge(s.display_state);
-    st.textContent = sLabel(s.display_state);
+    st.className = "badge " + sBadge(studentState(s));
+    st.textContent = sLabel(studentState(s));
     $("#dwAgeBadge") && ($("#dwAgeBadge").textContent = s.age ? s.age + " años" : "Edad —");
     $("#dwAge") && ($("#dwAge").textContent = s.age ?? "—");
     $("#dwSex") && ($("#dwSex").textContent = s.sex || "—");
@@ -1331,7 +1356,7 @@
   }
   function updateKpis() {
     const fin = api.financeKpis(PAYMENTS);
-    const active = STUDENTS.filter((s) => s.display_state === "activo").length;
+    const active = STUDENTS.filter((s) => !["suspendido", "sin_iniciar_sesion"].includes(studentState(s))).length;
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
