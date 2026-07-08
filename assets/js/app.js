@@ -342,8 +342,11 @@
         <td class="muted">${api.esc(p.concept)}</td>
         <td class="mono" style="font-weight:600">$${Number(p.amount).toLocaleString("es-MX")}</td>
         <td>${new Date(p.due_date).toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}</td>
-        <td><span class="badge ${badgeClass[p.state]}">${p.state === "ok" ? "Pagado" : stateLabel[p.state]}</span></td>
-        <td class="cell-actions">${p.state === "ok" ? '<span class="t3 text-sm">—</span>' : '<button class="btn btn--lime btn--sm js-mark-paid" data-payment="' + p.id + '">Cobrar</button>'}</td>
+        <td><span class="badge ${badgeClass[p.state]}">${p.state === "ok" ? "Pagado" : stateLabel[p.state]}</span>${p.notes ? ` <span class="t3" title="${api.esc(p.notes)}">📝</span>` : ""}</td>
+        <td class="cell-actions">
+          ${p.state === "ok" ? "" : '<button class="btn btn--lime btn--sm js-mark-paid" data-payment="' + p.id + '">Cobrar</button>'}
+          <button class="icon-btn js-edit-payment" data-payment="${p.id}" style="width:32px;height:32px" title="Editar pago"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+        </td>
       </tr>`).join("") || `<tr><td colspan="6" class="t3 text-sm" style="padding:20px;text-align:center">Sin pagos registrados.</td></tr>`;
   }
 
@@ -743,6 +746,43 @@
       $("#npConcept").value = "Membresía";
       toast("Pago registrado", "", "ok");
     } catch (ex) { errToast(ex, "No se pudo registrar el pago"); }
+  });
+
+  /* ---------- Editar pago individual (#8) ---------- */
+  attachMoneyInput($("#epAmount"));
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest(".js-edit-payment");
+    if (!btn) return;
+    e.stopPropagation();
+    const p = PAYMENTS.find((x) => x.id === btn.dataset.payment);
+    if (!p) return;
+    $("#epId").value = p.id;
+    $("#epConcept").value = p.concept || "";
+    $("#epAmount").value = api.formatMoneyMXN(Number(p.amount) || 0);
+    $("#epDue").value = p.due_date || "";
+    $("#epState").value = p.state === "ok" ? "ok" : "pend";
+    $("#epNotes").value = p.notes || "";
+    $("#modal-editPayment")?.classList.add("is-open");
+  });
+  $("#formEditPayment")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const id = $("#epId").value;
+    const amount = api.parseMoneyMXN($("#epAmount").value);
+    if (!id || !amount) return;
+    try {
+      await api.updatePayment(id, {
+        concept: $("#epConcept").value.trim() || "Membresía",
+        amount,
+        due_date: $("#epDue").value,
+        state: $("#epState").value,
+        notes: $("#epNotes").value.trim() || null,
+      });
+      await refreshPayments();
+      renderStudents();
+      updateKpis();
+      $$(".modal-overlay").forEach((m) => m.classList.remove("is-open"));
+      toast("Pago actualizado", "Los cambios se aplicaron correctamente", "ok");
+    } catch (ex) { errToast(ex, "No se pudo actualizar el pago"); }
   });
 
   /* ---------- Nuevo objetivo / seguimiento (persistido) ---------- */

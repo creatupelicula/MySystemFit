@@ -195,6 +195,17 @@ window.msfApi = (function () {
     if (error) throw error;
     return data;
   }
+  // Edición individual de un pago (monto/fecha/concepto/vencimiento/estado/notas).
+  // Si se marca como pagado y no traía paid_at, se sella con la fecha actual;
+  // si se saca de "ok", se limpia paid_at para que deje de contar como cobrado.
+  async function updatePayment(id, patch) {
+    const clean = { ...patch };
+    if (clean.state === "ok" && !clean.paid_at) clean.paid_at = new Date().toISOString();
+    if (clean.state && clean.state !== "ok") clean.paid_at = null;
+    const { data, error } = await sb().from("payments").update(clean).eq("id", id).select().single();
+    if (error) throw error;
+    return data;
+  }
 
   /* ---------- Routines ---------- */
   async function getStudentRoutine(studentId) {
@@ -624,7 +635,7 @@ window.msfApi = (function () {
     financeByPeriod,
     listStudents, createStudent, createStudentFull, updateStudent, deleteStudent,
     listStudentNotifications,
-    listPayments, markPaymentPaid, createPayment,
+    listPayments, markPaymentPaid, createPayment, updatePayment,
     getStudentRoutine, createRoutine, saveRoutineDay,
     listFollowUps, toggleFollowUp, createFollowUp,
     listWeightLogs, addWeightLog,
