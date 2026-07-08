@@ -187,6 +187,8 @@
   }
   $("#themeToggle")?.addEventListener("click", toggleTheme);
   $("#themeToggle2")?.addEventListener("click", toggleTheme);
+  // #12 Persiste tema/acento en la cuenta cada vez que el usuario los cambia.
+  window.msfTheme?.subscribe?.((mode, accent) => { api.saveThemePrefs({ mode, accent }).catch(() => {}); });
 
   /* ---------- Sonidos de interfaz ---------- */
   const soundToggleCoach = $("#soundToggleCoach");
@@ -2044,6 +2046,10 @@
     const auth = await window.msfAuth.requireCoachReady();
     if (!auth) return;
     PROFILE = auth.profile;
+    // #12 Aplica las preferencias visuales guardadas en la cuenta (siguen al
+    // coach entre dispositivos) y persiste cualquier cambio posterior.
+    window.msfTheme?.applyRemote?.({ mode: PROFILE.theme_mode, accent: PROFILE.accent_color });
+    renderAccentSwatches();
     $("#pageSub") && ($("#pageSub").textContent = `Buenas, ${PROFILE.full_name.split(" ")[0]} 👋`);
     $$(".coach-card__name").forEach((el) => (el.textContent = PROFILE.full_name));
     $$(".avatar.avatar--ring, .coach-card .avatar").forEach((el) => (el.textContent = api.initials(PROFILE.full_name)));

@@ -207,6 +207,20 @@ window.msfApi = (function () {
     return data;
   }
 
+  // #12 Preferencias visuales guardadas en la cuenta (no solo en el
+  // dispositivo): se sincronizan al iniciar sesión en cualquier dispositivo.
+  async function saveThemePrefs(prefs) {
+    const { data: { session } } = await sb().auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) return;
+    const patch = {};
+    if (prefs && prefs.mode) patch.theme_mode = prefs.mode;
+    if (prefs && prefs.accent) patch.accent_color = prefs.accent;
+    if (!Object.keys(patch).length) return;
+    const { error } = await sb().from("profiles").update(patch).eq("id", uid);
+    if (error) throw error;
+  }
+
   /* ---------- Routines ---------- */
   async function getStudentRoutine(studentId) {
     const { data: routine, error } = await sb()
@@ -636,6 +650,7 @@ window.msfApi = (function () {
     listStudents, createStudent, createStudentFull, updateStudent, deleteStudent,
     listStudentNotifications,
     listPayments, markPaymentPaid, createPayment, updatePayment,
+    saveThemePrefs,
     getStudentRoutine, createRoutine, saveRoutineDay,
     listFollowUps, toggleFollowUp, createFollowUp,
     listWeightLogs, addWeightLog,

@@ -55,13 +55,28 @@ window.msfTheme = (function () {
     document.documentElement.setAttribute("data-theme", mode);
   }
 
+  /* Suscriptores a cambios de tema/acento: la app los usa para persistir las
+     preferencias en la cuenta (Supabase) y que sigan al usuario entre
+     dispositivos. `emit` se dispara SOLO en cambios hechos por el usuario, no
+     al aplicar lo que viene de la cuenta (applyRemote), para no reescribir en
+     bucle lo mismo en cada login. */
+  const listeners = [];
+  function emit() { listeners.forEach((f) => { try { f(getMode(), getAccent()); } catch (_) {} }); }
+  function subscribe(fn) { if (typeof fn === "function") listeners.push(fn); }
+
   /* ---- API pública ---- */
   function getMode() { return lsGet(KEY_MODE) || "dark"; }
   function getAccent() { return lsGet(KEY_ACCENT) || PRESETS[0].hex; }
-  function setMode(mode) { lsSet(KEY_MODE, mode); applyMode(mode); }
+  function setMode(mode) { lsSet(KEY_MODE, mode); applyMode(mode); emit(); }
   function toggleMode() { const next = getMode() === "light" ? "dark" : "light"; setMode(next); return next; }
-  function setAccent(hex) { lsSet(KEY_ACCENT, hex); applyAccent(hex); }
-  function reset() { lsRemove(KEY_ACCENT); applyAccent(PRESETS[0].hex); }
+  function setAccent(hex) { lsSet(KEY_ACCENT, hex); applyAccent(hex); emit(); }
+  function reset() { lsRemove(KEY_ACCENT); applyAccent(PRESETS[0].hex); emit(); }
+  // Aplica preferencias provenientes de la cuenta sin re-emitir (evita reescritura).
+  function applyRemote(prefs) {
+    if (!prefs) return;
+    if (prefs.mode === "light" || prefs.mode === "dark") { lsSet(KEY_MODE, prefs.mode); applyMode(prefs.mode); }
+    if (prefs.accent) { lsSet(KEY_ACCENT, prefs.accent); applyAccent(prefs.accent); }
+  }
 
   /* Migración: si el acento guardado es el índigo viejo de la marca
      anterior, se resetea al azul eléctrico actual. */
@@ -73,5 +88,5 @@ window.msfTheme = (function () {
   applyMode(getMode());
   applyAccent(getAccent());
 
-  return { PRESETS, getMode, getAccent, setMode, toggleMode, setAccent, reset };
+  return { PRESETS, getMode, getAccent, setMode, toggleMode, setAccent, reset, subscribe, applyRemote };
 })();

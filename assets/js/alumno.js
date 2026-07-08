@@ -989,6 +989,8 @@
     const auth = await window.msfAuth.requireRole("alumno");
     if (!auth) return;
     PROFILE = auth.profile;
+    // #12 Preferencias visuales guardadas en la cuenta (siguen al usuario entre dispositivos).
+    window.msfTheme?.applyRemote?.({ mode: PROFILE.theme_mode, accent: PROFILE.accent_color });
     if (!PROFILE.coach_id) {
       toast("Tu cuenta no está vinculada a ningún coach todavía", "info");
       return;
