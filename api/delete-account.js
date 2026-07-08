@@ -22,6 +22,14 @@ module.exports = async function handler(req, res) {
     // borra a sí mismo, su fila en `students` quedaría como un fantasma
     // "pendiente" en el panel del coach si no se borra aparte.
     if (profile.role === "alumno") {
+      // Limpia las fotos de progreso del bucket privado (sin FK, no cascadean).
+      const { data: rows } = await db.from("students").select("id").eq("profile_id", user.id);
+      for (const r of rows || []) {
+        try {
+          const { data: files } = await db.storage.from("progress").list(r.id, { limit: 1000 });
+          if (files && files.length) await db.storage.from("progress").remove(files.map((f) => `${r.id}/${f.name}`));
+        } catch (_) { /* no abortar por fallo de storage */ }
+      }
       await db.from("students").delete().eq("profile_id", user.id);
     }
     const { error } = await admin().auth.admin.deleteUser(user.id);

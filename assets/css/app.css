@@ -844,10 +844,9 @@ ul { list-style: none; }
   .messages-thread__body { min-height: 320px; }
   .drawer { width: 100%; }
   .grid-cards { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
-  /* Alumnos: la tabla tiene min-width:640px y no cabe en móvil/tablet;
-     la vista de tarjetas ya es responsive, así que se fuerza aquí. */
-  #studentsTable, #viewToggle { display: none !important; }
-  #studentsCards { display: grid !important; }
+  /* En móvil/tablet la tabla (min-width:640px) no cabe: se fuerza la vista de
+     tarjetas desde JS (applyStudentView, matchMedia 820px), no por CSS, para
+     que exista una única fuente de verdad y jamás se vean dos vistas a la vez. */
 }
 .menu-toggle { display: none; }
 .sidebar__close { display: none; }

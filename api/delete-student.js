@@ -17,10 +17,29 @@ module.exports = async function handler(req, res) {
       .from("students").select("id, profile_id").eq("id", student_id).eq("coach_id", profile.id).maybeSingle();
     if (sErr) throw sErr;
     if (!student) { const e = new Error("Alumno no encontrado"); e.status = 404; throw e; }
+
+    // 1) Archivos de progreso en Storage: NO tienen FK, así que el cascade de la
+    //    BD no los borra. Se listan por carpeta (<student_id>/...) y se eliminan
+    //    para no dejar imágenes huérfanas en el bucket privado `progress`.
+    try {
+      const { data: files } = await db.storage.from("progress").list(student.id, { limit: 1000 });
+      if (files && files.length) {
+        await db.storage.from("progress").remove(files.map((f) => `${student.id}/${f.name}`));
+      }
+    } catch (_) { /* si falla la limpieza de storage no se aborta el borrado de datos */ }
+
+    // 2) Cuenta del alumno: borrar auth.users elimina en cascada el perfil y todo
+    //    lo que cuelga de él (mensajes enviados, comunidad, referidos) + sus
+    //    sesiones/refresh tokens, así que ya no podrá iniciar sesión. Se hace
+    //    antes que students para que un reintento (si el paso 3 fallara) siga
+    //    encontrando la fila y pueda completarse.
     if (student.profile_id) {
       const { error } = await db.auth.admin.deleteUser(student.profile_id);
       if (error) throw error;
     }
+    // 3) Ficha del alumno: students.profile_id es SET NULL (no CASCADE), así que
+    //    hay que borrarla aparte; su cascade elimina pagos, rutinas, objetivos,
+    //    fotos, asistencia y notificaciones ligados a student_id.
     const { error: delErr } = await db.from("students").delete().eq("id", student.id);
     if (delErr) throw delErr;
     return res.status(200).json({ ok: true });

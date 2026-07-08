@@ -231,6 +231,19 @@ window.msfApi = (function () {
     if (error) throw error;
     return url;
   }
+  // #11/task3 Quita la foto/logo: borra los archivos del coach en el bucket y
+  // limpia profiles.avatar_url (vuelve a mostrarse las iniciales en todas partes).
+  async function removeCoachAvatar() {
+    const { data: { session } } = await sb().auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) throw new Error("Sesión no válida");
+    try {
+      const { data: files } = await sb().storage.from("avatars").list(uid, { limit: 1000 });
+      if (files && files.length) await sb().storage.from("avatars").remove(files.map((f) => `${uid}/${f.name}`));
+    } catch (_) { /* si falla el borrado del archivo, igual limpiamos la URL */ }
+    const { error } = await sb().from("profiles").update({ avatar_url: null }).eq("id", uid);
+    if (error) throw error;
+  }
 
   // #12 Preferencias visuales guardadas en la cuenta (no solo en el
   // dispositivo): se sincronizan al iniciar sesión en cualquier dispositivo.
@@ -675,7 +688,7 @@ window.msfApi = (function () {
     listStudents, createStudent, createStudentFull, updateStudent, deleteStudent,
     listStudentNotifications,
     listPayments, markPaymentPaid, createPayment, updatePayment,
-    saveThemePrefs, recordOnboardingPayment, uploadCoachAvatar,
+    saveThemePrefs, recordOnboardingPayment, uploadCoachAvatar, removeCoachAvatar,
     getStudentRoutine, createRoutine, saveRoutineDay,
     listFollowUps, toggleFollowUp, createFollowUp,
     listWeightLogs, addWeightLog,

@@ -408,15 +408,17 @@
         <div class="grid-2">
           <div class="card">
             <div class="section-title">Perfil del coach</div>
-            <div class="row gap-4 mb-4"><div class="avatar avatar--xl"></div><div style="flex:1"><p class="t3 text-sm">Tu enlace de invitación (tus alumnos se registran con un clic, sin escribir nada):</p><p class="mono text-sm" id="inviteLinkDisplay" style="word-break:break-all"></p><button type="button" class="btn btn--primary btn--sm mt-4" id="btnCopyInvite">Copiar enlace de invitación</button><p class="t3 text-sm mt-4">O comparte tu código: <b class="mono" id="coachCodeDisplay">—</b> <button type="button" class="btn btn--ghost btn--sm" id="btnCopyCode">Copiar código</button></p></div></div>
-            <div class="row gap-4 mb-4" style="align-items:center">
-              <div class="avatar avatar--xl" id="coachAvatarPreview"></div>
-              <div>
-                <div class="fw-600" style="margin-bottom:6px">Foto o logo</div>
+            <div class="row gap-4 mb-4">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:8px;flex-shrink:0">
+                <div class="avatar avatar--xl" id="coachAvatarPreview" title="Subir foto o logo" style="cursor:pointer"></div>
                 <input type="file" id="coachAvatarInput" accept="image/*" hidden>
-                <button type="button" class="btn btn--ghost btn--sm" id="coachAvatarBtn">Subir imagen</button>
-                <div class="t3 text-sm" id="coachAvatarHint" style="margin-top:6px">Se mostrará a tus alumnos en toda la plataforma.</div>
+                <div class="row gap-2">
+                  <button type="button" class="btn btn--ghost btn--sm" id="coachAvatarBtn">Cambiar</button>
+                  <button type="button" class="btn btn--ghost btn--sm" id="coachAvatarRemove" style="display:none">Quitar</button>
+                </div>
+                <div class="t3 text-sm" id="coachAvatarHint" style="text-align:center;max-width:150px">Foto o logo · se muestra a tus alumnos</div>
               </div>
+              <div style="flex:1"><p class="t3 text-sm">Tu enlace de invitación (tus alumnos se registran con un clic, sin escribir nada):</p><p class="mono text-sm" id="inviteLinkDisplay" style="word-break:break-all"></p><button type="button" class="btn btn--primary btn--sm mt-4" id="btnCopyInvite">Copiar enlace de invitación</button><p class="t3 text-sm mt-4">O comparte tu código: <b class="mono" id="coachCodeDisplay">—</b> <button type="button" class="btn btn--ghost btn--sm" id="btnCopyCode">Copiar código</button></p></div>
             </div>
             <form id="formProfile">
               <div class="field"><label>Nombre</label><input class="input" id="profName"></div>

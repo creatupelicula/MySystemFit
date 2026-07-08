@@ -14,7 +14,21 @@
   let PAYMENTS = [];
   let FOLLOW_UPS = [];
   let CURRENT_STUDENT_ID = null; // alumno activo en drawer / builder de rutinas
-  let studentFilter = { text: "", type: "all", state: "all", groupBy: false, goalText: "" };
+  let studentFilter = { text: "", type: "all", state: "all", groupBy: false, goalText: "", view: "table" };
+  // Única fuente de verdad de qué vista de alumnos se ve (jamás dos a la vez):
+  //   objetivo (filtro "Objetivo") > móvil siempre tarjetas > preferencia toggle.
+  const mqlStudentsMobile = window.matchMedia("(max-width: 820px)");
+  function applyStudentView() {
+    const grouped = studentFilter.groupBy;
+    const mobile = mqlStudentsMobile.matches;
+    const mode = grouped ? "goal" : (mobile ? "cards" : studentFilter.view);
+    $("#studentsTable")?.classList.toggle("hidden", mode !== "table");
+    $("#studentsCards")?.classList.toggle("hidden", mode !== "cards");
+    $("#studentsByGoal")?.classList.toggle("hidden", mode !== "goal");
+    $("#viewToggle")?.classList.toggle("hidden", grouped || mobile);
+    $("#objSearch")?.classList.toggle("hidden", !grouped);
+  }
+  mqlStudentsMobile.addEventListener?.("change", applyStudentView);
 
   // Estados de PAGOS (ok/pend/late) — no confundir con estados del alumno
   const badgeClass = { ok: "badge--ok", pend: "badge--pend", late: "badge--late" };
@@ -202,8 +216,25 @@
       if (url) el.innerHTML = avatarImgHtml(url);
       else if (PROFILE) el.textContent = api.initials(PROFILE.full_name);
     });
+    const rm = $("#coachAvatarRemove");
+    if (rm) rm.style.display = url ? "" : "none";
   }
   $("#coachAvatarBtn")?.addEventListener("click", () => $("#coachAvatarInput")?.click());
+  $("#coachAvatarPreview")?.addEventListener("click", () => $("#coachAvatarInput")?.click());
+  $("#coachAvatarRemove")?.addEventListener("click", async () => {
+    const hint = $("#coachAvatarHint");
+    if (hint) hint.textContent = "Quitando…";
+    try {
+      await api.removeCoachAvatar();
+      PROFILE.avatar_url = null;
+      applyCoachAvatar(null);
+      if (hint) hint.textContent = "Foto o logo · se muestra a tus alumnos";
+      toast("Imagen eliminada", "Se quitó tu foto/logo", "info");
+    } catch (ex) {
+      if (hint) hint.textContent = "No se pudo quitar la imagen.";
+      errToast(ex, "No se pudo quitar la imagen");
+    }
+  });
   $("#coachAvatarInput")?.addEventListener("change", async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -317,15 +348,9 @@
       </div>`).join("") || `<p class="t3 text-sm" style="padding:20px;text-align:center">Sin alumnos que coincidan.</p>`;
   }
   function renderStudents() {
-    // Modo agrupado por objetivo: oculta tabla/tarjetas normales y el toggle.
-    const byGoal = $("#studentsByGoal");
-    const grouped = studentFilter.groupBy;
-    $("#studentsTable")?.classList.toggle("hidden", grouped);
-    $("#studentsCards")?.classList.toggle("hidden", grouped);
-    $("#viewToggle")?.classList.toggle("hidden", grouped);
-    byGoal?.classList.toggle("hidden", !grouped);
-    $("#objSearch")?.classList.toggle("hidden", !grouped);
-    if (grouped) { renderStudentsByGoal(); return; }
+    // Una sola vista visible a la vez (tabla / tarjetas / agrupada por objetivo).
+    applyStudentView();
+    if (studentFilter.groupBy) { renderStudentsByGoal(); return; }
     const list = filteredStudents();
     const tbody = $("#studentsTbody");
     const cards = $("#studentsCards");
@@ -420,9 +445,8 @@
     if (!b) return;
     $$("#viewToggle button").forEach((x) => x.classList.remove("is-active"));
     b.classList.add("is-active");
-    const cards = b.dataset.vt === "cards";
-    $("#studentsTable").classList.toggle("hidden", cards);
-    $("#studentsCards").classList.toggle("hidden", !cards);
+    studentFilter.view = b.dataset.vt === "cards" ? "cards" : "table";
+    applyStudentView();
   });
 
   /* ---------- Búsqueda y filtros de alumnos ---------- */
