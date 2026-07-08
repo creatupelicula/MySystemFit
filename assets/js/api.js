@@ -215,6 +215,23 @@ window.msfApi = (function () {
     if (error) throw error;
   }
 
+  // #11 Sube la foto/logo del coach al bucket público 'avatars' y guarda su URL
+  // en profiles.avatar_url (visible para sus alumnos). Devuelve la URL pública.
+  async function uploadCoachAvatar(file) {
+    const { data: { session } } = await sb().auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) throw new Error("Sesión no válida");
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+    const path = `${uid}/avatar_${Date.now()}.${ext}`;
+    const { error: upErr } = await sb().storage.from("avatars").upload(path, file, { upsert: true, contentType: file.type });
+    if (upErr) throw upErr;
+    const { data: pub } = sb().storage.from("avatars").getPublicUrl(path);
+    const url = pub?.publicUrl;
+    const { error } = await sb().from("profiles").update({ avatar_url: url }).eq("id", uid);
+    if (error) throw error;
+    return url;
+  }
+
   // #12 Preferencias visuales guardadas en la cuenta (no solo en el
   // dispositivo): se sincronizan al iniciar sesión en cualquier dispositivo.
   async function saveThemePrefs(prefs) {
@@ -658,7 +675,7 @@ window.msfApi = (function () {
     listStudents, createStudent, createStudentFull, updateStudent, deleteStudent,
     listStudentNotifications,
     listPayments, markPaymentPaid, createPayment, updatePayment,
-    saveThemePrefs, recordOnboardingPayment,
+    saveThemePrefs, recordOnboardingPayment, uploadCoachAvatar,
     getStudentRoutine, createRoutine, saveRoutineDay,
     listFollowUps, toggleFollowUp, createFollowUp,
     listWeightLogs, addWeightLog,

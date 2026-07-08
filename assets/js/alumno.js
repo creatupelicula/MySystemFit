@@ -1034,12 +1034,19 @@
     // Perfil del coach: nombre real en el chat + herencia de su plan
     try {
       const { data: coach } = await window.msfSupabase
-        .from("profiles").select("full_name, plan, specialty, bio").eq("id", PROFILE.coach_id).maybeSingle();
+        .from("profiles").select("full_name, plan, specialty, bio, avatar_url").eq("id", PROFILE.coach_id).maybeSingle();
       if (coach) {
         COACH_NAME = coach.full_name || "";
         $("#chatCoachName") && ($("#chatCoachName").textContent = coach.full_name);
         applyCoachPlan(coach.plan);
-        if (coach.specialty || coach.bio) {
+        // #11 Foto/logo del coach (o iniciales) en la tarjeta "Tu coach".
+        const av = $("#aCoachAvatar");
+        if (av) {
+          if (coach.avatar_url) av.innerHTML = `<img src="${api.esc(coach.avatar_url)}" alt="Tu coach" style="width:100%;height:100%;object-fit:cover;border-radius:inherit">`;
+          else av.textContent = api.initials(coach.full_name);
+        }
+        $("#aCoachNameLabel") && ($("#aCoachNameLabel").textContent = coach.full_name || "");
+        if (coach.avatar_url || coach.specialty || coach.bio) {
           $("#aCoachInfoCard") && ($("#aCoachInfoCard").style.display = "");
           if (coach.specialty) {
             $("#aCoachSpecialtyRow") && ($("#aCoachSpecialtyRow").style.display = "");

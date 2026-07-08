@@ -190,6 +190,39 @@
   // #12 Persiste tema/acento en la cuenta cada vez que el usuario los cambia.
   window.msfTheme?.subscribe?.((mode, accent) => { api.saveThemePrefs({ mode, accent }).catch(() => {}); });
 
+  /* ---------- #11 Foto / logo del coach ---------- */
+  // Pinta la imagen (o las iniciales) en las tres superficies del avatar del
+  // coach: tarjeta del sidebar, avatar de la topbar y la vista previa de Ajustes.
+  function avatarImgHtml(url) {
+    return `<img src="${api.esc(url)}" alt="Foto del coach" style="width:100%;height:100%;object-fit:cover;border-radius:inherit">`;
+  }
+  function applyCoachAvatar(url) {
+    const targets = $$(".avatar.avatar--ring, .coach-card .avatar, #coachAvatarPreview");
+    targets.forEach((el) => {
+      if (url) el.innerHTML = avatarImgHtml(url);
+      else if (PROFILE) el.textContent = api.initials(PROFILE.full_name);
+    });
+  }
+  $("#coachAvatarBtn")?.addEventListener("click", () => $("#coachAvatarInput")?.click());
+  $("#coachAvatarInput")?.addEventListener("change", async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast("Archivo no válido", "Elige una imagen.", "err"); return; }
+    if (file.size > 5 * 1024 * 1024) { toast("Imagen muy pesada", "Máximo 5 MB.", "err"); return; }
+    const hint = $("#coachAvatarHint");
+    if (hint) hint.textContent = "Subiendo…";
+    try {
+      const url = await api.uploadCoachAvatar(file);
+      PROFILE.avatar_url = url;
+      applyCoachAvatar(url);
+      if (hint) hint.textContent = "Imagen actualizada ✓";
+      toast("Foto actualizada", "Tus alumnos ya la verán", "ok");
+    } catch (ex) {
+      if (hint) hint.textContent = "No se pudo subir la imagen.";
+      errToast(ex, "No se pudo subir la imagen");
+    } finally { e.target.value = ""; }
+  });
+
   /* ---------- Sonidos de interfaz ---------- */
   const soundToggleCoach = $("#soundToggleCoach");
   if (soundToggleCoach && window.msfSound) {
@@ -2055,6 +2088,7 @@
     $("#pageSub") && ($("#pageSub").textContent = `Buenas, ${PROFILE.full_name.split(" ")[0]} 👋`);
     $$(".coach-card__name").forEach((el) => (el.textContent = PROFILE.full_name));
     $$(".avatar.avatar--ring, .coach-card .avatar").forEach((el) => (el.textContent = api.initials(PROFILE.full_name)));
+    applyCoachAvatar(PROFILE.avatar_url);
     $("#profName") && ($("#profName").value = PROFILE.full_name);
     $("#profEmail") && ($("#profEmail").value = PROFILE.email);
     $("#profPhone") && ($("#profPhone").value = PROFILE.phone || "");
